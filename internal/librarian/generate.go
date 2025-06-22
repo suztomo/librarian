@@ -132,7 +132,6 @@ func runGenerate(ctx context.Context) error {
 
 	state := &commandState{
 		ctx:             ctx,
-		startTime:       startTime,
 		workRoot:        workRoot,
 		languageRepo:    repo,
 		pipelineConfig:  config,
