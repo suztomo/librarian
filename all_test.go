@@ -121,11 +121,12 @@ func rungo(t *testing.T, args ...string) {
 	}
 }
 
-func TestExportedSymbolsHaveDocs(t *testing.T) {
+func TestDocComments(t *testing.T) {
 	// TODO(https://github.com/googleapis/librarian/issues/522): turn on once
 	// all existing symbols have docs.
 	t.Skip()
 
+	packages := map[string]bool{}
 	err := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return nil
@@ -136,6 +137,17 @@ func TestExportedSymbolsHaveDocs(t *testing.T) {
 		if err != nil {
 			t.Errorf("failed to parse file %q: %v", path, err)
 			return nil
+		}
+
+		dir := filepath.Dir(path)
+		if _, ok := packages[dir]; !ok {
+			// If this file has a package-level doc, mark the package as
+			// documented.
+			if node.Doc != nil {
+				packages[dir] = true
+			} else if !packages[dir] {
+				packages[dir] = false
+			}
 		}
 
 		// Visit every top-level declaration in the file.
@@ -155,6 +167,13 @@ func TestExportedSymbolsHaveDocs(t *testing.T) {
 			}
 			if fn, ok := decl.(*ast.FuncDecl); ok {
 				checkDoc(t, fn.Name, fn.Doc, path)
+			}
+		}
+
+		// Verify each package has documentation.
+		for pkgPath, documented := range packages {
+			if !documented {
+				t.Errorf("%s: missing top-level package comment", pkgPath)
 			}
 		}
 		return nil
