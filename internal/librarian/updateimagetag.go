@@ -162,7 +162,7 @@ func updateImageTag(state *commandState, cfg *config.Config) error {
 	}
 
 	// Commit any changes
-	commitMsg := fmt.Sprintf("chore: update generation image tag to %s", flagTag)
+	commitMsg := fmt.Sprintf("chore: update generation image tag to %s", cfg.Tag)
 	if err := commitAll(languageRepo, commitMsg); err != nil {
 		return err
 	}
