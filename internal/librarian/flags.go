@@ -24,7 +24,7 @@ import (
 )
 
 // Environment variables are specified here as they're used for the same sort of purpose as flags...
-// ... but see also githubrepo.go
+// ... but see also github.go
 const defaultRepositoryEnvironmentVariable string = "LIBRARIAN_REPOSITORY"
 
 var (

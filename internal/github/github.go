@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package githubrepo provides operations on GitHub repos, abstracting away go-github
-// (at least somewhat) to only the operations Librarian needs.
-package githubrepo
+// Package github provides operations on GitHub repos, abstracting away
+// go-github (at least somewhat) to only the operations Librarian needs.
+package github
 
 import (
 	"context"

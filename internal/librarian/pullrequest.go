@@ -21,7 +21,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/googleapis/librarian/internal/githubrepo"
+	"github.com/googleapis/librarian/internal/github"
 	"github.com/googleapis/librarian/internal/gitrepo"
 )
 
@@ -58,8 +58,8 @@ func addSuccessToPullRequest(pr *PullRequestContent, text string) {
 // If content only contains errors, the pull request is not created and an error is returned (to highlight that everything failed)
 // If content contains any successes, a pull request is created and no error is returned (if the creation is successful) even if the content includes errors.
 // If the pull request would contain an excessive number of commits (as configured in pipeline-config.json)
-func createPullRequest(ctx context.Context, state *commandState, content *PullRequestContent, titlePrefix, descriptionSuffix, branchType string, gitHubToken string, push bool) (*githubrepo.PullRequestMetadata, error) {
-	ghClient, err := githubrepo.NewClient(gitHubToken)
+func createPullRequest(ctx context.Context, state *commandState, content *PullRequestContent, titlePrefix, descriptionSuffix, branchType string, gitHubToken string, push bool) (*github.PullRequestMetadata, error) {
+	ghClient, err := github.NewClient(gitHubToken)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func createPullRequest(ctx context.Context, state *commandState, content *PullRe
 		return nil, nil
 	}
 
-	gitHubRepo, err := getGitHubRepoFromRemote(languageRepo)
+	github, err := getgithubFromRemote(languageRepo)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func createPullRequest(ctx context.Context, state *commandState, content *PullRe
 		slog.Info(fmt.Sprintf("Received error pushing branch: '%s'", err))
 		return nil, err
 	}
-	return ghClient.CreatePullRequest(ctx, gitHubRepo, branch, title, description)
+	return ghClient.CreatePullRequest(ctx, github, branch, title, description)
 }
 
 // Formats the given list as a single Markdown string, with a title preceding the list,
@@ -142,7 +142,7 @@ func formatListAsMarkdown(title string, list []string) string {
 // There must only be a single remote with a GitHub URL (as the first URL), in order to provide an
 // unambiguous result.
 // Remotes without any URLs, or where the first URL does not start with https://github.com/ are ignored.
-func getGitHubRepoFromRemote(repo *gitrepo.Repository) (*githubrepo.Repository, error) {
+func getgithubFromRemote(repo *gitrepo.Repository) (*github.Repository, error) {
 	remotes, err := repo.Remotes()
 	if err != nil {
 		return nil, err
@@ -165,5 +165,5 @@ func getGitHubRepoFromRemote(repo *gitrepo.Repository) (*githubrepo.Repository, 
 		joinedRemoteNames := strings.Join(gitHubRemoteNames, ", ")
 		return nil, fmt.Errorf("can only determine the GitHub repo with a single matching remote; GitHub remotes in repo: %s", joinedRemoteNames)
 	}
-	return githubrepo.ParseUrl(gitHubUrl)
+	return github.ParseUrl(gitHubUrl)
 }

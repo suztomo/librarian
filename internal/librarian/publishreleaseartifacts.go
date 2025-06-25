@@ -28,7 +28,7 @@ import (
 	"github.com/googleapis/librarian/internal/cli"
 	"github.com/googleapis/librarian/internal/config"
 	"github.com/googleapis/librarian/internal/docker"
-	"github.com/googleapis/librarian/internal/githubrepo"
+	"github.com/googleapis/librarian/internal/github"
 )
 
 var cmdPublishReleaseArtifacts = &cli.Command{
@@ -120,7 +120,7 @@ func publishReleaseArtifacts(ctx context.Context, containerConfig *docker.Docker
 
 	// Load the pipeline config from the commit of the first release, using the tag repo, then
 	// update our context to use it for the container config.
-	gitHubRepo, err := githubrepo.ParseUrl(tagRepoURL)
+	github, err := github.ParseUrl(tagRepoURL)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func publishReleaseArtifacts(ctx context.Context, containerConfig *docker.Docker
 	if err := publishPackages(containerConfig, artifactRoot, releases); err != nil {
 		return err
 	}
-	if err := createRepoReleases(ctx, releases, gitHubRepo, gitHubToken); err != nil {
+	if err := createRepoReleases(ctx, releases, github, gitHubToken); err != nil {
 		return err
 	}
 	slog.Info("Release complete.")
@@ -148,8 +148,8 @@ func publishPackages(config *docker.Docker, outputRoot string, releases []Librar
 	return nil
 }
 
-func createRepoReleases(ctx context.Context, releases []LibraryRelease, gitHubRepo *githubrepo.Repository, gitHubToken string) error {
-	ghClient, err := githubrepo.NewClient(gitHubToken)
+func createRepoReleases(ctx context.Context, releases []LibraryRelease, github *github.Repository, gitHubToken string) error {
+	ghClient, err := github.NewClient(gitHubToken)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func createRepoReleases(ctx context.Context, releases []LibraryRelease, gitHubRe
 		tag := formatReleaseTag(release.LibraryID, release.Version)
 		title := fmt.Sprintf("%s version %s", release.LibraryID, release.Version)
 		prerelease := strings.HasPrefix(release.Version, "0.") || strings.Contains(release.Version, "-")
-		repoRelease, err := ghClient.CreateRelease(ctx, gitHubRepo, tag, release.CommitHash, title, release.ReleaseNotes, prerelease)
+		repoRelease, err := ghClient.CreateRelease(ctx, github, tag, release.CommitHash, title, release.ReleaseNotes, prerelease)
 		if err != nil {
 			return err
 		}
