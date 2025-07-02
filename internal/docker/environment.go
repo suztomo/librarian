@@ -43,10 +43,7 @@ type EnvironmentProvider struct {
 	pipelineConfig *statepb.PipelineConfig
 }
 
-func newEnvironmentProvider(
-	workRoot, secretsProject string,
-	pipelineConfig *statepb.PipelineConfig,
-) *EnvironmentProvider {
+func newEnvironmentProvider(workRoot, secretsProject string, pipelineConfig *statepb.PipelineConfig) *EnvironmentProvider {
 	if pipelineConfig == nil {
 		return nil
 	}
@@ -81,10 +78,7 @@ func createAndWriteToFile(filePath string, content string) (err error) {
 	return err
 }
 
-func (e *EnvironmentProvider) constructEnvironmentFileContent(
-	ctx context.Context,
-	commandName string,
-) (string, error) {
+func (e *EnvironmentProvider) constructEnvironmentFileContent(ctx context.Context, commandName string) (string, error) {
 	commandConfig := e.pipelineConfig.Commands[commandName]
 	if commandConfig == nil {
 		return "# No environment variables", nil
@@ -124,11 +118,7 @@ func (e *EnvironmentProvider) constructEnvironmentFileContent(
 	return builder.String(), nil
 }
 
-func getSecretManagerValue(
-	ctx context.Context,
-	dockerEnv *EnvironmentProvider,
-	variable *statepb.CommandEnvironmentVariable,
-) (string, bool, error) {
+func getSecretManagerValue(ctx context.Context, dockerEnv *EnvironmentProvider, variable *statepb.CommandEnvironmentVariable) (string, bool, error) {
 	if variable.SecretName == "" {
 		return "", false, nil
 	}

@@ -100,15 +100,7 @@ func init() {
 }
 
 func runUpdateAPIs(ctx context.Context, cfg *config.Config) error {
-	state, err := createCommandStateForLanguage(
-		cfg.WorkRoot,
-		cfg.Repo,
-		cfg.Image,
-		cfg.Project,
-		cfg.CI,
-		cfg.UserUID,
-		cfg.UserGID,
-	)
+	state, err := createCommandStateForLanguage(cfg.WorkRoot, cfg.Repo, cfg.Image, cfg.Project, cfg.CI, cfg.UserUID, cfg.UserGID)
 	if err != nil {
 		return err
 	}
@@ -174,28 +166,12 @@ func updateAPIs(ctx context.Context, state *commandState, cfg *config.Config) er
 			return err
 		}
 	}
-	_, err := createPullRequest(
-		ctx,
-		state,
-		prContent,
-		"feat: API regeneration",
-		"",
-		"regen",
-		cfg.GitHubToken,
-		cfg.Push,
-	)
+	_, err := createPullRequest(ctx, state, prContent, "feat: API regeneration", "", "regen", cfg.GitHubToken, cfg.Push)
 	return err
 }
 
-func updateLibrary(
-	ctx context.Context,
-	state *commandState,
-	cfg *config.Config,
-	apiRepo *gitrepo.Repository,
-	outputRoot string,
-	library *statepb.LibraryState,
-	prContent *PullRequestContent,
-) error {
+func updateLibrary(ctx context.Context, state *commandState, cfg *config.Config, apiRepo *gitrepo.Repository, outputRoot string, library *statepb.LibraryState,
+	prContent *PullRequestContent) error {
 	cc := state.containerConfig
 	languageRepo := state.languageRepo
 
@@ -215,10 +191,7 @@ func updateLibrary(
 	}
 
 	initialGeneration := library.LastGeneratedCommit == ""
-	commits, err := apiRepo.GetCommitsForPathsSinceCommit(
-		library.ApiPaths,
-		library.LastGeneratedCommit,
-	)
+	commits, err := apiRepo.GetCommitsForPathsSinceCommit(library.ApiPaths, library.LastGeneratedCommit)
 	if err != nil {
 		return err
 	}
@@ -313,13 +286,7 @@ func createCommitMessage(libraryID string, commits []*gitrepo.Commit) string {
 	var builder strings.Builder
 
 	// Start the commit with a line on its own saying what's being regenerated.
-	builder.WriteString(
-		fmt.Sprintf(
-			"regen: Regenerate %s at API commit %s",
-			libraryID,
-			commits[0].Hash.String()[0:7],
-		),
-	)
+	builder.WriteString(fmt.Sprintf("regen: Regenerate %s at API commit %s", libraryID, commits[0].Hash.String()[0:7]))
 	builder.WriteString("\n")
 	builder.WriteString("\n")
 
@@ -330,13 +297,7 @@ func createCommitMessage(libraryID string, commits []*gitrepo.Commit) string {
 	for i := len(commits) - 1; i >= 0; i-- {
 		commit := commits[i]
 		messageLines := strings.Split(commit.Message, "\n")
-		sourceLinkLines = append(
-			sourceLinkLines,
-			fmt.Sprintf(
-				"Source-Link: https://github.com/googleapis/googleapis/commit/%s",
-				commit.Hash.String(),
-			),
-		)
+		sourceLinkLines = append(sourceLinkLines, fmt.Sprintf("Source-Link: https://github.com/googleapis/googleapis/commit/%s", commit.Hash.String()))
 		for _, line := range messageLines {
 			if strings.HasPrefix(line, PiperPrefix) {
 				piperRevIdLines = append(piperRevIdLines, line)

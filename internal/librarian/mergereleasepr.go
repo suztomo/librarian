@@ -179,11 +179,7 @@ func mergeReleasePR(ctx context.Context, workRoot string, cfg *config.Config) er
 // TODO(https://github.com/googleapis/librarian/issues/544): make timing configurable?
 const sleepDelay = time.Duration(60) * time.Second
 
-func waitForPullRequestReadiness(
-	ctx context.Context,
-	prMetadata *github.PullRequestMetadata,
-	cfg *config.Config,
-) error {
+func waitForPullRequestReadiness(ctx context.Context, prMetadata *github.PullRequestMetadata, cfg *config.Config) error {
 	// TODO(https://github.com/googleapis/librarian/issues/543): time out here, or let Kokoro do so?
 
 	for {
@@ -216,11 +212,7 @@ func waitForPullRequestReadiness(
 //     released by the PR
 //   - There must be at least one approving reviews from a member/owner of the
 //     repo, and no reviews from members/owners requesting changes
-func waitForPullRequestReadinessSingleIteration(
-	ctx context.Context,
-	prMetadata *github.PullRequestMetadata,
-	cfg *config.Config,
-) (bool, error) {
+func waitForPullRequestReadinessSingleIteration(ctx context.Context, prMetadata *github.PullRequestMetadata, cfg *config.Config) (bool, error) {
 	slog.Info("Checking pull request for readiness")
 	ghClient, err := github.NewClient(cfg.GitHubToken)
 	if err != nil {
@@ -256,11 +248,7 @@ func waitForPullRequestReadinessSingleIteration(
 	gotDoNotMergeLabel := false
 	for _, label := range pr.Labels {
 		if label.GetName() == MergeBlockedLabel {
-			slog.Info(
-				"PR still has merge-blocked label; skipping other checks",
-				"label",
-				MergeBlockedLabel,
-			)
+			slog.Info("PR still has merge-blocked label; skipping other checks", "label", MergeBlockedLabel)
 			return false, nil
 		}
 		if label.GetName() == DoNotMergeLabel {
@@ -270,23 +258,13 @@ func waitForPullRequestReadinessSingleIteration(
 
 	// We expect to remove the do-not-merge label ourselves (and we'll fail otherwise).
 	if !gotDoNotMergeLabel {
-		return false, reportBlockingReason(
-			ctx,
-			prMetadata,
-			fmt.Sprintf("Label '%s' has been removed already", DoNotMergeLabel),
-			cfg,
-		)
+		return false, reportBlockingReason(ctx, prMetadata, fmt.Sprintf("Label '%s' has been removed already", DoNotMergeLabel), cfg)
 	}
 
 	// If the PR isn't mergeable, that requires user action.
 	if !pr.GetMergeable() {
 		// This will log the reason.
-		return false, reportBlockingReason(
-			ctx,
-			prMetadata,
-			"PR is not mergeable (e.g. there are conflicting commit)",
-			cfg,
-		)
+		return false, reportBlockingReason(ctx, prMetadata, "PR is not mergeable (e.g. there are conflicting commit)", cfg)
 	}
 
 	// Check that all the statuses have passed.
@@ -297,8 +275,7 @@ func waitForPullRequestReadinessSingleIteration(
 	for _, checkRun := range checkRuns {
 		// Skip the do-not-merge check and conventional commits checks
 		// (Once b/416489721 has been fixed, we can remove the conventional commits check)
-		if checkRun.GetApp().GetID() == DoNotMergeAppId ||
-			checkRun.GetApp().GetID() == ConventionalCommitsAppId {
+		if checkRun.GetApp().GetID() == DoNotMergeAppId || checkRun.GetApp().GetID() == ConventionalCommitsAppId {
 			continue
 		}
 
@@ -310,12 +287,7 @@ func waitForPullRequestReadinessSingleIteration(
 			return false, nil
 		}
 		if checkRun.GetConclusion() != "success" {
-			return false, reportBlockingReason(
-				ctx,
-				prMetadata,
-				fmt.Sprintf("Check '%s' failed", *checkRun.Name),
-				cfg,
-			)
+			return false, reportBlockingReason(ctx, prMetadata, fmt.Sprintf("Check '%s' failed", *checkRun.Name), cfg)
 		}
 	}
 
@@ -343,11 +315,7 @@ func waitForPullRequestReadinessSingleIteration(
 	return true, nil
 }
 
-func mergePullRequest(
-	ctx context.Context,
-	prMetadata *github.PullRequestMetadata,
-	cfg *config.Config,
-) (string, error) {
+func mergePullRequest(ctx context.Context, prMetadata *github.PullRequestMetadata, cfg *config.Config) (string, error) {
 	ghClient, err := github.NewClient(cfg.GitHubToken)
 	if err != nil {
 		return "", err
@@ -356,12 +324,7 @@ func mergePullRequest(
 	if err := ghClient.RemoveLabelFromPullRequest(ctx, prMetadata.Repo, prMetadata.Number, "do-not-merge"); err != nil {
 		return "", err
 	}
-	mergeResult, err := ghClient.MergePullRequest(
-		ctx,
-		prMetadata.Repo,
-		prMetadata.Number,
-		github.MergeMethodRebase,
-	)
+	mergeResult, err := ghClient.MergePullRequest(ctx, prMetadata.Repo, prMetadata.Number, github.MergeMethodRebase)
 	if err != nil {
 		return "", err
 	}
@@ -424,23 +387,13 @@ func waitForSync(mergeCommit string, cfg *config.Config) error {
 //
 // Returns true if all the commits are fine, or false if a problem was detected, in which
 // case it will have been reported on the PR, and the merge-blocking label applied.
-func checkPullRequestCommits(
-	ctx context.Context,
-	prMetadata *github.PullRequestMetadata,
-	pr *github.PullRequest,
-	cfg *config.Config,
-) (bool, error) {
+func checkPullRequestCommits(ctx context.Context, prMetadata *github.PullRequestMetadata, pr *github.PullRequest, cfg *config.Config) (bool, error) {
 	baseRepo := github.CreateGitHubRepoFromRepository(pr.Base.Repo)
 	baseHeadState, err := fetchRemotePipelineState(ctx, baseRepo, *pr.Base.Ref, cfg.GitHubToken)
 	if err != nil {
 		return false, err
 	}
-	baselineState, err := fetchRemotePipelineState(
-		ctx,
-		baseRepo,
-		cfg.BaselineCommit,
-		cfg.GitHubToken,
-	)
+	baselineState, err := fetchRemotePipelineState(ctx, baseRepo, cfg.BaselineCommit, cfg.GitHubToken)
 	if err != nil {
 		return false, err
 	}
@@ -471,12 +424,7 @@ func checkPullRequestCommits(
 
 	for _, release := range releases {
 		if strings.HasPrefix(release.ReleaseNotes, "FIXME") {
-			return false, reportBlockingReason(
-				ctx,
-				prMetadata,
-				fmt.Sprintf("Release notes for '%s' need fixing", release.LibraryID),
-				cfg,
-			)
+			return false, reportBlockingReason(ctx, prMetadata, fmt.Sprintf("Release notes for '%s' need fixing", release.LibraryID), cfg)
 		}
 	}
 
@@ -497,13 +445,7 @@ func checkPullRequestCommits(
 
 	suspectReleases := []SuspectRelease{}
 
-	slog.Info(
-		"Checking commits against libraries for intervening changes",
-		"commits",
-		len(fullBaseCommits),
-		"libraries",
-		len(releases),
-	)
+	slog.Info("Checking commits against libraries for intervening changes", "commits", len(fullBaseCommits), "libraries", len(releases))
 	for _, release := range releases {
 		suspectRelease := checkRelease(release, baseHeadState, baselineState, fullBaseCommits)
 		if suspectRelease != nil {
@@ -516,23 +458,15 @@ func checkPullRequestCommits(
 	}
 
 	var builder strings.Builder
-	builder.WriteString(
-		"At least one library being released may have changed since release PR creation:\n\n",
-	)
+	builder.WriteString("At least one library being released may have changed since release PR creation:\n\n")
 	for _, suspectRelease := range suspectReleases {
-		builder.WriteString(
-			fmt.Sprintf("%s: %s\n", suspectRelease.LibraryID, suspectRelease.Reason),
-		)
+		builder.WriteString(fmt.Sprintf("%s: %s\n", suspectRelease.LibraryID, suspectRelease.Reason))
 	}
 	return false, reportBlockingReason(ctx, prMetadata, builder.String(), cfg)
 }
 
 // Checks that the pull request has at least one approved review, and no "changes requested" reviews.
-func checkPullRequestApproval(
-	ctx context.Context,
-	prMetadata *github.PullRequestMetadata,
-	cfg *config.Config,
-) (bool, error) {
+func checkPullRequestApproval(ctx context.Context, prMetadata *github.PullRequestMetadata, cfg *config.Config) (bool, error) {
 	ghClient, err := github.NewClient(cfg.GitHubToken)
 	if err != nil {
 		return false, err
@@ -548,8 +482,7 @@ func checkPullRequestApproval(
 	for _, review := range reviews {
 		association := review.GetAuthorAssociation()
 		// TODO(https://github.com/googleapis/librarian/issues/545): check the required approvals
-		if association != "MEMBER" && association != "OWNER" && association != "COLLABORATOR" &&
-			association != "CONTRIBUTOR" {
+		if association != "MEMBER" && association != "OWNER" && association != "COLLABORATOR" && association != "CONTRIBUTOR" {
 			slog.Info("Ignoring review with author association", "association", association)
 			continue
 		}
@@ -561,21 +494,14 @@ func checkPullRequestApproval(
 
 		userID := review.GetUser().GetID()
 		// Need to ensure review is the latest for the user
-		if current, exists := latestReviews[userID]; !exists ||
-			review.GetSubmittedAt().After(current.GetSubmittedAt().Time) {
+		if current, exists := latestReviews[userID]; !exists || review.GetSubmittedAt().After(current.GetSubmittedAt().Time) {
 			latestReviews[userID] = review
 		}
 	}
 
 	approved := false
 	for _, review := range latestReviews {
-		slog.Info(
-			"Review state",
-			"submitted_at",
-			review.GetSubmittedAt().Format(time.RFC3339),
-			"state",
-			review.GetState(),
-		)
+		slog.Info("Review state", "submitted_at", review.GetSubmittedAt().Format(time.RFC3339), "state", review.GetState())
 		if review.GetState() == "APPROVED" {
 			approved = true
 		} else if review.GetState() == "CHANGES_REQUESTED" {
@@ -586,24 +512,9 @@ func checkPullRequestApproval(
 	return approved, nil
 }
 
-func reportBlockingReason(
-	ctx context.Context,
-	prMetadata *github.PullRequestMetadata,
-	description string,
-	cfg *config.Config,
-) error {
-	slog.Warn(
-		"Adding label to PR and commenting with description",
-		"label",
-		MergeBlockedLabel,
-		"description",
-		description,
-	)
-	comment := fmt.Sprintf(
-		"%s\n\nAfter resolving the issue, please remove the '%s' label.",
-		description,
-		MergeBlockedLabel,
-	)
+func reportBlockingReason(ctx context.Context, prMetadata *github.PullRequestMetadata, description string, cfg *config.Config) error {
+	slog.Warn("Adding label to PR and commenting with description", "label", MergeBlockedLabel, "description", description)
+	comment := fmt.Sprintf("%s\n\nAfter resolving the issue, please remove the '%s' label.", description, MergeBlockedLabel)
 	ghClient, err := github.NewClient(cfg.GitHubToken)
 	if err != nil {
 		return err
@@ -617,31 +528,18 @@ func reportBlockingReason(
 	return nil
 }
 
-func checkRelease(
-	release LibraryRelease,
-	baseHeadState, baselineState *statepb.PipelineState,
-	baseCommits []*github.RepositoryCommit,
-) *SuspectRelease {
+func checkRelease(release LibraryRelease, baseHeadState, baselineState *statepb.PipelineState, baseCommits []*github.RepositoryCommit) *SuspectRelease {
 	baseHeadLibrary := findLibraryByID(baseHeadState, release.LibraryID)
 	if baseHeadLibrary == nil {
-		return &SuspectRelease{
-			LibraryID: release.LibraryID,
-			Reason:    "Library does not exist in head pipeline state",
-		}
+		return &SuspectRelease{LibraryID: release.LibraryID, Reason: "Library does not exist in head pipeline state"}
 	}
 	baselineLibrary := findLibraryByID(baselineState, release.LibraryID)
 	if baselineLibrary == nil {
-		return &SuspectRelease{
-			LibraryID: release.LibraryID,
-			Reason:    "Library does not exist in baseline commit pipeline state",
-		}
+		return &SuspectRelease{LibraryID: release.LibraryID, Reason: "Library does not exist in baseline commit pipeline state"}
 	}
 	// TODO(https://github.com/googleapis/librarian/issues/546): find a better way of comparing these.
 	if baseHeadLibrary.String() != baselineLibrary.String() {
-		return &SuspectRelease{
-			LibraryID: release.LibraryID,
-			Reason:    "Pipeline state has changed between baseline and head",
-		}
+		return &SuspectRelease{LibraryID: release.LibraryID, Reason: "Pipeline state has changed between baseline and head"}
 	}
 	sourcePaths := append(baseHeadState.CommonLibrarySourcePaths, baseHeadLibrary.SourcePaths...)
 	changeCommits := []string{}
@@ -651,10 +549,7 @@ func checkRelease(
 		}
 	}
 	if len(changeCommits) > 0 {
-		reason := fmt.Sprintf(
-			"Library source changed in intervening commits: %s",
-			strings.Join(changeCommits, ", "),
-		)
+		reason := fmt.Sprintf("Library source changed in intervening commits: %s", strings.Join(changeCommits, ", "))
 		return &SuspectRelease{LibraryID: release.LibraryID, Reason: reason}
 	}
 	return nil
@@ -664,8 +559,7 @@ func checkIfCommitAffectsAnySourcePath(commit *github.RepositoryCommit, sourcePa
 	for _, commitFile := range commit.Files {
 		changedPath := *commitFile.Filename
 		for _, sourcePath := range sourcePaths {
-			if changedPath == sourcePath ||
-				(strings.HasPrefix(changedPath, sourcePath) && strings.HasPrefix(changedPath, sourcePath+"/")) {
+			if changedPath == sourcePath || (strings.HasPrefix(changedPath, sourcePath) && strings.HasPrefix(changedPath, sourcePath+"/")) {
 				return true
 			}
 		}
@@ -673,10 +567,7 @@ func checkIfCommitAffectsAnySourcePath(commit *github.RepositoryCommit, sourcePa
 	return false
 }
 
-func parseRemoteCommitsForReleases(
-	commits []*github.RepositoryCommit,
-	releaseID string,
-) ([]LibraryRelease, error) {
+func parseRemoteCommitsForReleases(commits []*github.RepositoryCommit, releaseID string) ([]LibraryRelease, error) {
 	releases := []LibraryRelease{}
 	for _, commit := range commits {
 		release, err := parseCommitMessageForRelease(*commit.Commit.Message, *commit.SHA)
@@ -684,11 +575,7 @@ func parseRemoteCommitsForReleases(
 			return nil, err
 		}
 		if release.ReleaseID != releaseID {
-			return nil, fmt.Errorf(
-				"while finding releases for release ID %s, found commit with release ID %s",
-				releaseID,
-				release.ReleaseID,
-			)
+			return nil, fmt.Errorf("while finding releases for release ID %s, found commit with release ID %s", releaseID, release.ReleaseID)
 		}
 		releases = append(releases, *release)
 	}

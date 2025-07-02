@@ -128,14 +128,7 @@ func runGenerate(ctx context.Context, cfg *config.Config) error {
 	if err != nil {
 		return err
 	}
-	containerConfig, err := docker.New(
-		workRoot,
-		image,
-		cfg.Project,
-		cfg.UserUID,
-		cfg.UserGID,
-		config,
-	)
+	containerConfig, err := docker.New(workRoot, image, cfg.Project, cfg.UserUID, cfg.UserGID, config)
 	if err != nil {
 		return err
 	}
@@ -164,9 +157,7 @@ func executeGenerate(ctx context.Context, state *commandState, cfg *config.Confi
 	}
 	if cfg.Build {
 		if libraryID != "" {
-			slog.Info(
-				"Build requested in the context of refined generation; cleaning and copying code to the local language repo before building.",
-			)
+			slog.Info("Build requested in the context of refined generation; cleaning and copying code to the local language repo before building.")
 			if err := state.containerConfig.Clean(ctx, cfg, state.languageRepo.Dir, libraryID); err != nil {
 				return err
 			}
@@ -189,12 +180,7 @@ func executeGenerate(ctx context.Context, state *commandState, cfg *config.Confi
 // and log the error.
 // If refined generation is used, the context's languageRepo field will be populated and the
 // library ID will be returned; otherwise, an empty string will be returned.
-func runGenerateCommand(
-	ctx context.Context,
-	state *commandState,
-	cfg *config.Config,
-	outputDir string,
-) (string, error) {
+func runGenerateCommand(ctx context.Context, state *commandState, cfg *config.Config, outputDir string) (string, error) {
 	apiRoot, err := filepath.Abs(cfg.Source)
 	if err != nil {
 		return "", err
@@ -205,20 +191,11 @@ func runGenerateCommand(
 	if state.languageRepo != nil {
 		libraryID := findLibraryIDByApiPath(state.pipelineState, cfg.API)
 		if libraryID == "" {
-			return "", errors.New(
-				"bug in Librarian: Library not found during generation, despite being found in earlier steps",
-			)
+			return "", errors.New("bug in Librarian: Library not found during generation, despite being found in earlier steps")
 		}
 		generatorInput := filepath.Join(state.languageRepo.Dir, config.GeneratorInputDir)
 		slog.Info("Performing refined generation for library", "id", libraryID)
-		return libraryID, state.containerConfig.GenerateLibrary(
-			ctx,
-			cfg,
-			apiRoot,
-			outputDir,
-			generatorInput,
-			libraryID,
-		)
+		return libraryID, state.containerConfig.GenerateLibrary(ctx, cfg, apiRoot, outputDir, generatorInput, libraryID)
 	} else {
 		slog.Info("No matching library found (or no repo specified); performing raw generation", "path", cfg.API)
 		return "", state.containerConfig.GenerateRaw(ctx, cfg, apiRoot, outputDir, cfg.API)
@@ -230,10 +207,7 @@ func runGenerateCommand(
 // pipeline state if repoRoot has been specified, or the remote pipeline state (just
 // by fetching the single file) if flatRepoUrl has been specified. If neither the repo
 // root not the repo url has been specified, we always perform raw generation.
-func detectIfLibraryConfigured(
-	ctx context.Context,
-	apiPath, repo, gitHubToken string,
-) (bool, error) {
+func detectIfLibraryConfigured(ctx context.Context, apiPath, repo, gitHubToken string) (bool, error) {
 	if repo == "" {
 		slog.Warn("repo is not specified, cannot check if library exists")
 		return false, nil
@@ -246,9 +220,7 @@ func detectIfLibraryConfigured(
 	)
 	if !isUrl(repo) {
 		// repo is a directory
-		pipelineState, err = loadPipelineStateFile(
-			filepath.Join(repo, config.GeneratorInputDir, pipelineStateFile),
-		)
+		pipelineState, err = loadPipelineStateFile(filepath.Join(repo, config.GeneratorInputDir, pipelineStateFile))
 		if err != nil {
 			return false, err
 		}

@@ -34,9 +34,7 @@ const pipelineConfigFile = "pipeline-config.json"
 
 // Utility functions for saving and loading pipeline state and config from various places.
 
-func loadRepoStateAndConfig(
-	languageRepo *gitrepo.Repository,
-) (*statepb.PipelineState, *statepb.PipelineConfig, error) {
+func loadRepoStateAndConfig(languageRepo *gitrepo.Repository) (*statepb.PipelineState, *statepb.PipelineConfig, error) {
 	if languageRepo == nil {
 		return nil, nil, nil
 	}
@@ -88,23 +86,13 @@ func savePipelineState(state *commandState) error {
 	return err
 }
 
-func fetchRemotePipelineState(
-	ctx context.Context,
-	repo *github.Repository,
-	ref string,
-	gitHubToken string,
-) (*statepb.PipelineState, error) {
+func fetchRemotePipelineState(ctx context.Context, repo *github.Repository, ref string, gitHubToken string) (*statepb.PipelineState, error) {
 	ghClient, err := github.NewClient(gitHubToken)
 	if err != nil {
 		return nil, err
 	}
 	return parsePipelineState(func() ([]byte, error) {
-		return ghClient.GetRawContent(
-			ctx,
-			repo,
-			config.GeneratorInputDir+"/"+pipelineStateFile,
-			ref,
-		)
+		return ghClient.GetRawContent(ctx, repo, config.GeneratorInputDir+"/"+pipelineStateFile, ref)
 	})
 }
 
