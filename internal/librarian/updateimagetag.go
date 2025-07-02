@@ -77,11 +77,9 @@ func init() {
 	cfg := cmdUpdateImageTag.Config
 
 	addFlagBranch(fs, cfg)
-	addFlagGitUserEmail(fs, cfg)
-	addFlagGitUserName(fs, cfg)
+	addFlagPushConfig(fs, cfg)
 	addFlagRepo(fs, cfg)
 	addFlagProject(fs, cfg)
-	addFlagPush(fs, cfg)
 	addFlagSource(fs, cfg)
 	addFlagTag(fs, cfg)
 	addFlagWorkRoot(fs, cfg)
@@ -170,7 +168,7 @@ func updateImageTag(ctx context.Context, state *commandState, cfg *config.Config
 	// Commit any changes
 	commitMsg := fmt.Sprintf("chore: update generation image tag to %s", cfg.Tag)
 	if err := commitAll(languageRepo, commitMsg,
-		cfg.GitUserName, cfg.GitUserEmail); err != nil {
+		cfg.PushConfig); err != nil {
 		return err
 	}
 
