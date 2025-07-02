@@ -32,3 +32,13 @@ linters:
     - unused
     - usetesting
     
+formatters:
+  # See https://golangci-lint.run/usage/formatters for details.
+  default: none
+  enable:
+    - gofmt
+    - goimports
+    - golines
+  settings:
+    golines:
+      max-len: 120 # Align with lll's max-len
