@@ -39,6 +39,3 @@ formatters:
     - gofmt
     - goimports
     - golines
-  settings:
-    golines:
-      max-len: 120 # Align with lll's max-len
