@@ -599,15 +599,32 @@ func TestGenerateRun(t *testing.T) {
 				ghClient:        test.ghClient,
 				workRoot:        t.TempDir(),
 			}
-
+			outputDir := filepath.Join(r.workRoot, "output")
+			if err := os.MkdirAll(outputDir, 0755); err != nil {
+				t.Fatalf("os.MkdirAll() = %v", err)
+			}
 			// Create a symlink in the output directory to trigger an error.
 			if test.name == "symlink in output" {
-				outputDir := filepath.Join(r.workRoot, "output")
-				if err := os.MkdirAll(outputDir, 0755); err != nil {
-					t.Fatalf("os.MkdirAll() = %v", err)
-				}
+
 				if err := os.Symlink("target", filepath.Join(outputDir, "symlink")); err != nil {
 					t.Fatalf("os.Symlink() = %v", err)
+				}
+			}
+			if test.name == "generation of API" {
+				// outputDir := filepath.Join(r.workRoot, "output")
+
+				// if err := os.MkdirAll(outputDir, 0755); err != nil {
+				// 	t.Fatalf("os.MkdirAll() = %v", err)
+				// }
+				dummyFilePath := filepath.Join(outputDir, "dummy.go")
+				// dummyFile, error := os.Create(dummyFilePath)
+				// if error != nil {
+				// 	t.Fatalf("os.Create() = %v", error)
+				// }
+				// defer dummyFile.Close()
+				content := []byte("package dummy\n")
+				if err := os.WriteFile(dummyFilePath, content, 0644); err != nil {
+					t.Fatalf("os.WriteFile() = %v", err)
 				}
 			}
 
