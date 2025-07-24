@@ -17,6 +17,7 @@ package librarian
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -47,11 +48,17 @@ type mockContainerClient struct {
 func (m *mockContainerClient) Generate(ctx context.Context, request *docker.GenerateRequest) error {
 	m.generateCalls++
 	dummyFilePath := filepath.Join(request.Output, "dummy.go")
-	dummyFile, error := os.Create(dummyFilePath)
-	if error != nil {
-		return error
+	_, err := os.Stat(dummyFilePath)
+
+	if err == nil {
+		fmt.Printf("File '%s' exists.\n", dummyFilePath)
+	} else {
+		dummyFile, error := os.Create(dummyFilePath)
+		if error != nil {
+			return error
+		}
+		defer dummyFile.Close()
 	}
-	defer dummyFile.Close()
 	return m.generateErr
 }
 
@@ -513,6 +520,7 @@ func TestGenerateRun(t *testing.T) {
 				ghClient:        test.ghClient,
 				workRoot:        t.TempDir(),
 			}
+
 			// Create a symlink in the output directory to trigger an error.
 			if test.name == "symlink in output" {
 				outputDir := filepath.Join(r.workRoot, "output")
