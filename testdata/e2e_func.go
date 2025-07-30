@@ -12,7 +12,6 @@ import (
 const (
 	inputDir          = "input"
 	librarian         = "librarian"
-	libraryID         = "library-id"
 	outputDir         = "output"
 	source            = "source"
 	generateRequest   = "generate-request.json"
@@ -60,8 +59,6 @@ func parseRequest(args []string) (*generateOption, error) {
 			generateOption.intputDir = strs[1]
 		case librarian:
 			generateOption.librarianDir = strs[1]
-		case libraryID:
-			generateOption.libraryID = strs[1]
 		case outputDir:
 			generateOption.outputDir = strs[1]
 		case source:
@@ -91,9 +88,6 @@ func writeToOutput(option *generateOption) error {
 	defer jsonFile.Close()
 
 	dataMap := map[string]string{}
-	if option.libraryID == nonExistedLibrary {
-		dataMap["error"] = "simulated generation error"
-	}
 	data, err := json.MarshalIndent(dataMap, "", "  ")
 	if err != nil {
 		return err
@@ -102,9 +96,6 @@ func writeToOutput(option *generateOption) error {
 		return err
 	}
 	log.Print("write generate response to " + jsonFilePath)
-	if option.libraryID == nonExistedLibrary {
-		return errors.New("generation failed due to invalid library id")
-	}
 	return nil
 }
 
@@ -112,6 +103,5 @@ type generateOption struct {
 	intputDir    string
 	outputDir    string
 	librarianDir string
-	libraryID    string
 	sourceDir    string
 }
