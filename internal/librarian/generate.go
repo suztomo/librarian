@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -29,6 +28,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/googleapis/librarian/internal/cli"
 	"github.com/googleapis/librarian/internal/config"
@@ -115,6 +116,9 @@ func newGenerateRunner(cfg *config.Config) (*generateRunner, error) {
 	repo, err := cloneOrOpenLanguageRepo(workRoot, cfg.Repo, cfg.CI)
 	if err != nil {
 		return nil, err
+	}
+	if cfg.APISource == "" {
+		cfg.APISource = "https://github.com/googleapis/googleapis"
 	}
 	state, err := loadRepoState(repo, cfg.APISource)
 	if err != nil {
