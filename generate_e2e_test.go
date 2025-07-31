@@ -24,12 +24,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/googleapis/librarian/internal/gitrepo"
 )
 
 const (
 	repo               = "repo"
 	localRepoBackupDir = "testdata/e2e/generate/repo_backup"
-	localAPISource     = newTestGitRepo(t).GetDir()
+	localAPISource     = "testdata/e2e/generate/api_root"
 )
 
 func TestRunGenerate(t *testing.T) {
@@ -52,7 +54,7 @@ func TestRunGenerate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			workRoot := filepath.Join(t.TempDir())
 			repo := filepath.Join(workRoot, repo)
-			if err := prepareTest(t, repo, workRoot, localRepoBackupDir); err != nil {
+			if APISourceRepo, err := prepareTest(t, repo, workRoot, localRepoBackupDir); err != nil {
 				t.Fatalf("prepare test error = %v", err)
 			}
 
@@ -64,7 +66,7 @@ func TestRunGenerate(t *testing.T) {
 				fmt.Sprintf("--api=%s", test.api),
 				fmt.Sprintf("--output=%s", workRoot),
 				fmt.Sprintf("--repo=%s", repo),
-				fmt.Sprintf("--api-source=%s", localAPISource),
+				fmt.Sprintf("--api-source=%s", APISourceRepo.GetDir()),
 			)
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
@@ -101,32 +103,36 @@ func TestRunGenerate(t *testing.T) {
 	}
 }
 
-func prepareTest(t *testing.T, destRepoDir, workRoot, sourceRepoDir string) error {
-	if err := initTestRepo(t, destRepoDir, sourceRepoDir); err != nil {
-		return err
+func prepareTest(t *testing.T, destRepoDir, workRoot, sourceRepoDir string) (gitrepo.Repository, error) {
+	if repo, err := initTestRepo(t, destRepoDir, sourceRepoDir); err != nil {
+		return nil, err
 	}
 	if err := os.MkdirAll(workRoot, 0755); err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return repo, nil
 }
 
 // initTestRepo initiates an empty git repo in the given directory, copy
 // files from source directory and create a commit.
-func initTestRepo(t *testing.T, dir, source string) error {
+func initTestRepo(t *testing.T, dir, source string) (gitrepo.Repository, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
+		return nil, err
 	}
 	if err := os.CopyFS(dir, os.DirFS(source)); err != nil {
-		return err
+		return nil, err
 	}
 	runGit(t, dir, "init")
 	runGit(t, dir, "add", ".")
 	runGit(t, dir, "config", "user.email", "test@github.com")
 	runGit(t, dir, "config", "user.name", "Test User")
 	runGit(t, dir, "commit", "-m", "init test repo")
-	return nil
+	repo, err := gitrepo.NewRepository(&gitrepo.RepositoryOptions{Dir: dir})
+	if err != nil {
+		t.Fatalf("gitrepo.Open(%q) = %v", dir, err)
+	}
+	return repo, nil
 }
 
 type genResponse struct {
