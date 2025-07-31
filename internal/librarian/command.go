@@ -30,8 +30,8 @@ import (
 	"github.com/googleapis/librarian/internal/gitrepo"
 )
 
-func cloneOrOpenRepo(workRoot, repo, ci string) (*gitrepo.LocalRepository, error) {
-	if repo == "" {
+func cloneOrOpenRepo(workRoot, repo, ci string, forLanguage bool) (*gitrepo.LocalRepository, error) {
+	if repo == "" && forLanguage {
 		return nil, errors.New("repo must be specified")
 	}
 
