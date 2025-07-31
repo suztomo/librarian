@@ -29,7 +29,7 @@ import (
 const (
 	repo               = "repo"
 	localRepoBackupDir = "testdata/e2e/generate/repo_backup"
-	localAPISource     = "testdata/e2e/generate/api_root"
+	localAPISource     = newTestGitRepo(t).GetDir()
 )
 
 func TestRunGenerate(t *testing.T) {
