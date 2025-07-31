@@ -334,6 +334,15 @@ func TestNewGenerateRunner(t *testing.T) {
 			},
 		},
 		{
+			name: "missing api source",
+			cfg: &config.Config{
+				API:      "some/api",
+				Repo:     newTestGitRepo(t).GetDir(),
+				WorkRoot: t.TempDir(),
+				Image:    "gcr.io/test/test-image",
+			},
+		},
+		{
 			name: "missing image",
 			cfg: &config.Config{
 
