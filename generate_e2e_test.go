@@ -129,10 +129,6 @@ func initTestRepo(t *testing.T, dir, source string) error {
 	runGit(t, dir, "add", ".")
 	runGit(t, dir, "config", "user.email", "test@github.com")
 	runGit(t, dir, "config", "user.name", "Test User")
-	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("test"), 0644); err != nil {
-		t.Fatalf("os.WriteFile: %v", err)
-	}
-	runGit(t, dir, "add", "README.md")
 	runGit(t, dir, "commit", "-m", "init test repo")
 	return nil
 }
