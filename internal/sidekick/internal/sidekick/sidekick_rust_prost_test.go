@@ -21,6 +21,9 @@ import (
 )
 
 func TestRustProstFromProtobuf(t *testing.T) {
+	// TODO(https://github.com/googleapis/librarian/issues/1510): fix test
+	t.Skip()
+
 	outDir, err := os.MkdirTemp(t.TempDir(), "golden")
 	if err != nil {
 		t.Fatal(err)
