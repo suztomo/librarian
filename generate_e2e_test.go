@@ -71,7 +71,7 @@ func TestRunGenerate(t *testing.T) {
 			)
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
-			err := cmd.Run()
+			err = cmd.Run()
 			if test.wantErr {
 				if err == nil {
 					t.Fatalf("%s should fail", test.name)
@@ -105,10 +105,11 @@ func TestRunGenerate(t *testing.T) {
 }
 
 func prepareTest(t *testing.T, destRepoDir, workRoot, sourceRepoDir string) (gitrepo.Repository, error) {
-	if githubRepo, err := initTestRepo(t, destRepoDir, sourceRepoDir); err != nil {
+	githubRepo, err := initTestRepo(t, destRepoDir, sourceRepoDir)
+	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(workRoot, 0755); err != nil {
+	if err = os.MkdirAll(workRoot, 0755); err != nil {
 		return nil, err
 	}
 
