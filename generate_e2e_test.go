@@ -24,8 +24,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-
-	"github.com/googleapis/librarian/internal/gitrepo"
 )
 
 const (
@@ -54,8 +52,7 @@ func TestRunGenerate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			workRoot := filepath.Join(t.TempDir())
 			repo := filepath.Join(workRoot, repo)
-			_, err := prepareTest(t, repo, workRoot, localRepoBackupDir)
-			if err != nil {
+			if err := prepareTest(t, repo, workRoot, localRepoBackupDir); err != nil {
 				t.Fatalf("prepare test error = %v", err)
 			}
 
@@ -71,7 +68,7 @@ func TestRunGenerate(t *testing.T) {
 			)
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
-			err = cmd.Run()
+			err := cmd.Run()
 			if test.wantErr {
 				if err == nil {
 					t.Fatalf("%s should fail", test.name)
@@ -104,41 +101,32 @@ func TestRunGenerate(t *testing.T) {
 	}
 }
 
-func prepareTest(t *testing.T, destRepoDir, workRoot, sourceRepoDir string) (gitrepo.Repository, error) {
-	githubRepo, err := initTestRepo(t, destRepoDir, sourceRepoDir)
-	if err != nil {
-		return nil, err
+func prepareTest(t *testing.T, destRepoDir, workRoot, sourceRepoDir string) error {
+	if err := initTestRepo(t, destRepoDir, sourceRepoDir); err != nil {
+		return err
 	}
-	if err = os.MkdirAll(workRoot, 0755); err != nil {
-		return nil, err
+	if err := os.MkdirAll(workRoot, 0755); err != nil {
+		return err
 	}
 
-	return githubRepo, nil
+	return nil
 }
 
 // initTestRepo initiates an empty git repo in the given directory, copy
 // files from source directory and create a commit.
-func initTestRepo(t *testing.T, dir, source string) (gitrepo.Repository, error) {
+func initTestRepo(t *testing.T, dir, source string) error {
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, err
+		return err
 	}
 	if err := os.CopyFS(dir, os.DirFS(source)); err != nil {
-		return nil, err
+		return err
 	}
 	runGit(t, dir, "init")
 	runGit(t, dir, "add", ".")
 	runGit(t, dir, "config", "user.email", "test@github.com")
 	runGit(t, dir, "config", "user.name", "Test User")
-	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("test"), 0644); err != nil {
-		t.Fatalf("os.WriteFile: %v", err)
-	}
-	runGit(t, dir, "add", "README.md")
 	runGit(t, dir, "commit", "-m", "init test repo")
-	githubRepo, err := gitrepo.NewRepository(&gitrepo.RepositoryOptions{Dir: dir})
-	if err != nil {
-		t.Fatalf("gitrepo.Open(%q) = %v", dir, err)
-	}
-	return githubRepo, nil
+	return nil
 }
 
 type genResponse struct {
