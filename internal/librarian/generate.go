@@ -103,9 +103,11 @@ type generateRunner struct {
 }
 
 func newGenerateRunner(cfg *config.Config) (*generateRunner, error) {
-	if err := validateRequiredFlag("repo", cfg.Repo); err != nil {
+	repoPath, err := deriveRepoPath(cfg.Repo)
+	if err != nil {
 		return nil, err
 	}
+	cfg.Repo = repoPath
 	if err := validatePushConfigAndGithubTokenCoexist(cfg.PushConfig, cfg.GitHubToken); err != nil {
 		return nil, err
 	}
