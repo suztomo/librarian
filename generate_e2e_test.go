@@ -54,7 +54,7 @@ func TestRunGenerate(t *testing.T) {
 			repo := filepath.Join(workRoot, repo)
 			APISouceRepo := filepath.Join(workRoot, localAPISource)
 			if err := prepareTest(t, repo, workRoot, localRepoBackupDir); err != nil {
-				t.Fatalf("prepare test error = %v", err)
+				t.Fatalf("languageRepo prepare test error = %v", err)
 			}
 			if err := prepareTest(t, APISouceRepo, workRoot, localAPISource); err != nil {
 				t.Fatalf("APISouceRepo prepare test error = %v", err)
