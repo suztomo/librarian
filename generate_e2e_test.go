@@ -54,7 +54,8 @@ func TestRunGenerate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			workRoot := filepath.Join(t.TempDir())
 			repo := filepath.Join(workRoot, repo)
-			if APISourceRepo, err := prepareTest(t, repo, workRoot, localRepoBackupDir); err != nil {
+			APISourceRepo, err := prepareTest(t, repo, workRoot, localRepoBackupDir)
+			if err != nil {
 				t.Fatalf("prepare test error = %v", err)
 			}
 
@@ -104,14 +105,14 @@ func TestRunGenerate(t *testing.T) {
 }
 
 func prepareTest(t *testing.T, destRepoDir, workRoot, sourceRepoDir string) (gitrepo.Repository, error) {
-	if repo, err := initTestRepo(t, destRepoDir, sourceRepoDir); err != nil {
+	if githubRepo, err := initTestRepo(t, destRepoDir, sourceRepoDir); err != nil {
 		return nil, err
 	}
 	if err := os.MkdirAll(workRoot, 0755); err != nil {
 		return nil, err
 	}
 
-	return repo, nil
+	return githubRepo, nil
 }
 
 // initTestRepo initiates an empty git repo in the given directory, copy
@@ -128,11 +129,11 @@ func initTestRepo(t *testing.T, dir, source string) (gitrepo.Repository, error) 
 	runGit(t, dir, "config", "user.email", "test@github.com")
 	runGit(t, dir, "config", "user.name", "Test User")
 	runGit(t, dir, "commit", "-m", "init test repo")
-	repo, err := gitrepo.NewRepository(&gitrepo.RepositoryOptions{Dir: dir})
+	githubRepo, err := gitrepo.NewRepository(&gitrepo.RepositoryOptions{Dir: dir})
 	if err != nil {
 		t.Fatalf("gitrepo.Open(%q) = %v", dir, err)
 	}
-	return repo, nil
+	return githubRepo, nil
 }
 
 type genResponse struct {
