@@ -53,7 +53,7 @@ func TestRunGenerate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			workRoot := filepath.Join(t.TempDir())
 			repo := filepath.Join(workRoot, repo)
-			APISourceRepo := filepath.Join(workRoot, localAPISource)
+			APISourceRepo := filepath.Join(workRoot, APISourceRepo)
 			if err := prepareTest(t, repo, workRoot, localRepoBackupDir); err != nil {
 				t.Fatalf("languageRepo prepare test error = %v", err)
 			}
