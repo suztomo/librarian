@@ -54,7 +54,7 @@ func TestRunGenerate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			workRoot := filepath.Join(t.TempDir())
 			repo := filepath.Join(workRoot, repo)
-			APISourceRepo, err := prepareTest(t, repo, workRoot, localRepoBackupDir)
+			_, err := prepareTest(t, repo, workRoot, localRepoBackupDir)
 			if err != nil {
 				t.Fatalf("prepare test error = %v", err)
 			}
@@ -67,7 +67,7 @@ func TestRunGenerate(t *testing.T) {
 				fmt.Sprintf("--api=%s", test.api),
 				fmt.Sprintf("--output=%s", workRoot),
 				fmt.Sprintf("--repo=%s", repo),
-				fmt.Sprintf("--api-source=%s", APISourceRepo.GetDir()),
+				fmt.Sprintf("--api-source=%s", localAPISource),
 			)
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout

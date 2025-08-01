@@ -113,10 +113,10 @@ func newGenerateRunner(cfg *config.Config) (*generateRunner, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := cloneOrOpenRepo(workRoot, cfg.APISource, cfg.CI, false); err != nil {
+	if _, err := cloneOrOpenRepo(workRoot, cfg.APISource, cfg.CI); err != nil {
 		return nil, err
 	}
-	languageRepo, err := cloneOrOpenRepo(workRoot, cfg.Repo, cfg.CI, true)
+	languageRepo, err := cloneOrOpenRepo(workRoot, cfg.Repo, cfg.CI)
 	if err != nil {
 		return nil, err
 	}
