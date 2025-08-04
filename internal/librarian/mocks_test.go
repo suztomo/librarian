@@ -66,7 +66,7 @@ func (m *mockContainerClient) Generate(ctx context.Context, request *docker.Gene
 	m.generateCalls++
 	// Write a generate-response.json because it is required by generate
 	// command.
-	if err := os.MkdirAll(request.Output, 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(request.RepoDir, config.LibrarianDir), 0755); err != nil {
 		return err
 	}
 
@@ -74,7 +74,7 @@ func (m *mockContainerClient) Generate(ctx context.Context, request *docker.Gene
 	if m.wantErrorMsg {
 		libraryStr = "{error: simulated error message}"
 	}
-	if err := os.WriteFile(filepath.Join(request.Output, config.GenerateResponse), []byte(libraryStr), 0755); err != nil {
+	if err := os.WriteFile(filepath.Join(request.RepoDir, config.LibrarianDir, config.GenerateResponse), []byte(libraryStr), 0755); err != nil {
 		return err
 	}
 	if m.failGenerateForID != "" {

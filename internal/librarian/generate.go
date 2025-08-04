@@ -249,7 +249,7 @@ func (r *generateRunner) runGenerateCommand(ctx context.Context, libraryID, outp
 		func(data []byte, libraryState *config.LibraryState) error {
 			return json.Unmarshal(data, libraryState)
 		},
-		filepath.Join(outputDir, config.GenerateResponse)); err != nil {
+		filepath.Join(generateRequest.RepoDir, config.LibrarianDir, config.GenerateResponse)); err != nil {
 		return "", err
 	}
 
