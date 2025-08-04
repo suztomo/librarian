@@ -101,7 +101,7 @@ type LibraryState struct {
 	RemoveRegex []string `yaml:"remove_regex" json:"remove_regex"`
 	// The error message from the command response.
 	// This field is ignored when writing to state.yaml.
-	ErrorMessage string `yaml:"-" json:"error"`
+	ErrorMessage string `yaml:"-" json:"error,omitempty"`
 }
 
 var (
