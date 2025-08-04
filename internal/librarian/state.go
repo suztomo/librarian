@@ -146,6 +146,10 @@ func readConfigureResponse(contentLoader func(data []byte, state *config.Library
 		return nil, fmt.Errorf("failed to load file, %s, to state: %w", jsonFilePath, err)
 	}
 
+	if libraryState.ErrorMessage != "" {
+		return nil, fmt.Errorf("failed with error message: %s", libraryState.ErrorMessage)
+	}
+
 	return libraryState, nil
 }
 
