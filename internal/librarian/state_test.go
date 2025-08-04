@@ -299,6 +299,11 @@ func TestReadConfigureResponseJSON(t *testing.T) {
 			wantState:    &config.LibraryState{},
 		},
 		{
+			name:         "load content with an error message",
+			jsonFilePath: "../../testdata/unmarshal-libraryState-with-error-msg.json",
+			wantState:    nil,
+		},
+		{
 			name:      "invalid file name",
 			wantState: nil,
 		},
@@ -351,6 +356,18 @@ func TestReadConfigureResponseJSON(t *testing.T) {
 			}
 
 			gotState, err := readConfigureResponse(contentLoader, dstFilePath)
+
+			if test.name == "load content with an error message" {
+				if err == nil {
+					t.Errorf("readConfigureResponse() expected an error but got nil")
+				}
+
+				if g, w := err.Error(), "failed with error message"; !strings.Contains(g, w) {
+					t.Errorf("got %q, wanted it to contain %q", g, w)
+				}
+
+				return
+			}
 
 			if err != nil {
 				t.Fatalf("readConfigureResponse() unexpected error: %v", err)
