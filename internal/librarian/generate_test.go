@@ -170,7 +170,7 @@ func TestRunConfigureCommand(t *testing.T) {
 		wantErr            bool
 	}{
 		{
-			name: "configures library",
+			name: "configures library successfully",
 			api:  "some/api",
 			repo: newTestGitRepo(t),
 			state: &config.LibrarianState{
@@ -193,6 +193,22 @@ func TestRunConfigureCommand(t *testing.T) {
 					{
 						ID:   "some-library",
 						APIs: []*config.API{{Path: "non-existent-dir/api"}},
+					},
+				},
+			},
+			container:          &mockContainerClient{},
+			wantConfigureCalls: 1,
+			wantErr:            true,
+		},
+		{
+			name: "configures library with error message in response",
+			api:  "some/api",
+			repo: newTestGitRepo(t),
+			state: &config.LibrarianState{
+				Libraries: []*config.LibraryState{
+					{
+						ID:   "some-library",
+						APIs: []*config.API{{Path: "some/api"}},
 					},
 				},
 			},
@@ -249,7 +265,8 @@ func TestRunConfigureCommand(t *testing.T) {
 				containerClient: test.container,
 			}
 
-			if test.name == "configures library" {
+			if test.name == "configures library successfully" ||
+					test.name == "configures library with error message in response" {
 				if err := os.MkdirAll(filepath.Join(cfg.APISource, test.api), 0755); err != nil {
 					t.Fatal(err)
 				}
@@ -265,16 +282,25 @@ func TestRunConfigureCommand(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				libraryStr := fmt.Sprintf(`{
+				libraryStr := ""
+				if test.name == "configures library successfully" {
+					libraryStr = fmt.Sprintf(`{
 	"ID": "%s"
 }`, test.state.Libraries[0].ID)
+				} else {
+					libraryStr = fmt.Sprintf(`{
+	"ID": "%s",
+  "error": "simulated error message"
+}`, test.state.Libraries[0].ID)
+				}
+
 				if err := os.WriteFile(filepath.Join(r.repo.GetDir(), config.LibrarianDir, config.ConfigureResponse), []byte(libraryStr), 0755); err != nil {
 					t.Fatal(err)
 				}
 			}
 
 			if test.name == "configures library with no response" ||
-				test.name == "configure command failed" {
+					test.name == "configure command failed" {
 				if err := os.MkdirAll(filepath.Join(cfg.APISource, test.api), 0755); err != nil {
 					t.Fatal(err)
 				}
