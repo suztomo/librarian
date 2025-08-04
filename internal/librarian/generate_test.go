@@ -266,7 +266,7 @@ func TestRunConfigureCommand(t *testing.T) {
 			}
 
 			if test.name == "configures library successfully" ||
-					test.name == "configures library with error message in response" {
+				test.name == "configures library with error message in response" {
 				if err := os.MkdirAll(filepath.Join(cfg.APISource, test.api), 0755); err != nil {
 					t.Fatal(err)
 				}
@@ -300,7 +300,7 @@ func TestRunConfigureCommand(t *testing.T) {
 			}
 
 			if test.name == "configures library with no response" ||
-					test.name == "configure command failed" {
+				test.name == "configure command failed" {
 				if err := os.MkdirAll(filepath.Join(cfg.APISource, test.api), 0755); err != nil {
 					t.Fatal(err)
 				}
