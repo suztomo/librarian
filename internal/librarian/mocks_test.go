@@ -16,8 +16,11 @@ package librarian
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/googleapis/librarian/internal/config"
 	"github.com/googleapis/librarian/internal/docker"
 	"github.com/googleapis/librarian/internal/github"
 	"github.com/googleapis/librarian/internal/gitrepo"
@@ -60,6 +63,16 @@ type mockContainerClient struct {
 
 func (m *mockContainerClient) Generate(ctx context.Context, request *docker.GenerateRequest) error {
 	m.generateCalls++
+	// Write a generate-response.json because it is required by generate
+	// command.
+	if err := os.MkdirAll(request.Output, 0755); err != nil {
+		return err
+	}
+
+	libraryStr := "{}"
+	if err := os.WriteFile(filepath.Join(request.Output, config.GenerateResponse), []byte(libraryStr), 0755); err != nil {
+		return err
+	}
 	if m.failGenerateForID != "" {
 		if request.LibraryID == m.failGenerateForID {
 			return m.generateErr

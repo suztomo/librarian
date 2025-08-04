@@ -77,6 +77,17 @@ func TestRunGenerateCommand(t *testing.T) {
 			}
 
 			outputDir := t.TempDir()
+			// Write a generate-response.json because it is required by generate
+			// command.
+			if err := os.MkdirAll(outputDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+
+			libraryStr := "{}"
+			if err := os.WriteFile(filepath.Join(outputDir, config.GenerateResponse), []byte(libraryStr), 0755); err != nil {
+				t.Fatal(err)
+			}
+
 			gotLibraryID, err := r.runGenerateCommand(context.Background(), "some-library", outputDir)
 			if (err != nil) != test.wantErr {
 				t.Errorf("runGenerateCommand() error = %v, wantErr %v", err, test.wantErr)

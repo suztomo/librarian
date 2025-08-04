@@ -244,6 +244,15 @@ func (r *generateRunner) runGenerateCommand(ctx context.Context, libraryID, outp
 		return "", err
 	}
 
+	// Read the library state from the response.
+	if _, err := readLibraryState(
+		func(data []byte, libraryState *config.LibraryState) error {
+			return json.Unmarshal(data, libraryState)
+		},
+		filepath.Join(outputDir, config.GenerateResponse)); err != nil {
+		return "", err
+	}
+
 	if err := r.cleanAndCopyLibrary(libraryID, outputDir); err != nil {
 		return "", err
 	}

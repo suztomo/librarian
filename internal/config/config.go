@@ -36,6 +36,9 @@ const (
 	GeneratorInputDir = ".librarian/generator-input"
 	// GenerateRequest is a JSON file that describes which library to generate.
 	GenerateRequest = "generate-request.json"
+	// GenerateResponse is a JSON file that describes which library to change
+	// after re-generation.
+	GenerateResponse = "generate-response.json"
 	// LibrarianDir is the default directory to store librarian state/config files,
 	// along with any additional configuration.
 	LibrarianDir = ".librarian"
