@@ -757,6 +757,28 @@ func TestGenerateScenarios(t *testing.T) {
 			wantErr:   true,
 		},
 		{
+			name:    "generate single existing library with error message in response",
+			api:     "some/api",
+			library: "some-library",
+			repo:    newTestGitRepo(t),
+			state: &config.LibrarianState{
+				Image: "gcr.io/test/image:v1.2.3",
+				Libraries: []*config.LibraryState{
+					{
+						ID:   "some-library",
+						APIs: []*config.API{{Path: "some/api"}},
+					},
+				},
+			},
+			container: &mockContainerClient{
+				wantErrorMsg: true,
+			},
+			ghClient:           &mockGitHubClient{},
+			wantGenerateCalls:  1,
+			wantConfigureCalls: 0,
+			wantErr:            true,
+		},
+		{
 			name: "generate all libraries configured in state",
 			repo: newTestGitRepo(t),
 			state: &config.LibrarianState{

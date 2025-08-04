@@ -59,6 +59,7 @@ type mockContainerClient struct {
 	configureErr      error
 	failGenerateForID string
 	requestLibraryID  string
+	wantErrorMsg      bool
 }
 
 func (m *mockContainerClient) Generate(ctx context.Context, request *docker.GenerateRequest) error {
@@ -70,6 +71,9 @@ func (m *mockContainerClient) Generate(ctx context.Context, request *docker.Gene
 	}
 
 	libraryStr := "{}"
+	if m.wantErrorMsg {
+		libraryStr = "{error: simulated error message}"
+	}
 	if err := os.WriteFile(filepath.Join(request.Output, config.GenerateResponse), []byte(libraryStr), 0755); err != nil {
 		return err
 	}
