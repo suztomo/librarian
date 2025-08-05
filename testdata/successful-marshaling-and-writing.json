@@ -8,7 +8,7 @@
       "service_config": "example_service_config.yaml"
     }
   ],
-  "source_roots": [
+  "source_paths": [
     "src/example/path"
   ],
   "preserve_regex": [

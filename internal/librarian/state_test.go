@@ -19,13 +19,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/googleapis/librarian/internal/config"
@@ -44,7 +43,7 @@ func TestParseLibrarianState(t *testing.T) {
 			content: `image: gcr.io/test/image:v1.2.3
 libraries:
   - id: a/b
-    source_roots:
+    source_paths:
       - src/a
       - src/b
     apis:
@@ -57,7 +56,7 @@ libraries:
 				Libraries: []*config.LibraryState{
 					{
 						ID:          "a/b",
-						SourceRoots: []string{"src/a", "src/b"},
+						SourcePaths: []string{"src/a", "src/b"},
 						APIs: []*config.API{
 							{
 								Path:          "a/b/v1",
@@ -73,7 +72,7 @@ libraries:
 			content: `image: gcr.io/test/image:v1.2.3
 libraries:
   - id: a/b
-    source_roots:
+    source_paths:
       - src/a
       - src/b
     apis:
@@ -288,7 +287,7 @@ func TestReadConfigureResponseJSON(t *testing.T) {
 						ServiceConfig: "example_service_config.yaml",
 					},
 				},
-				SourceRoots:   []string{"src/example/path"},
+				SourcePaths:   []string{"src/example/path"},
 				PreserveRegex: []string{"example-preserve-regex"},
 				RemoveRegex:   []string{"example-remove-regex"},
 			},
@@ -386,7 +385,7 @@ func TestWriteLibrarianState(t *testing.T) {
 								ServiceConfig: "example_service_config.yaml",
 							},
 						},
-						SourceRoots: []string{
+						SourcePaths: []string{
 							"src/example/path",
 						},
 						PreserveRegex: []string{

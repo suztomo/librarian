@@ -392,7 +392,7 @@ func TestNewGenerateRunner(t *testing.T) {
 						{
 							ID:          "some-library",
 							APIs:        []*config.API{{Path: "some/api", ServiceConfig: "api_config.yaml"}},
-							SourceRoots: []string{"src/a"},
+							SourcePaths: []string{"src/a"},
 						},
 					},
 				}
