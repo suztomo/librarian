@@ -11,6 +11,6 @@ libraries:
     version:
     last_generated_commit:
     apis:
-    - path: google/cloud/future/v2
+      - path: google/cloud/future/v2
     source_roots:
-    - google-cloud-future/v2
+      - google-cloud-future/v2
