@@ -21,9 +21,9 @@ import (
 	"github.com/googleapis/librarian/internal/sidekick/internal/api"
 )
 
-// ParseSegments parses a PathTemplate, defined at the [google.api.http annotation].
-//
 // The following documentation was copied and adapted from the [C++ HTTP Annotation parser]
+//
+// This parser interprets the PathTemplate syntax, defined at the [google.api.http annotation].
 //
 // A `google.api.http` annotation describes how to convert gRPC RPCs to HTTP
 // URLs. The description uses a "path template", showing what portions of the

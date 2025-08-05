@@ -33,7 +33,7 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
-// ParseProtobuf reads Protobuf specifications and converts them into
+// ParserProtobuf reads Protobuf specifications and converts them into
 // the `api.API` model.
 func ParseProtobuf(source, serviceConfigFile string, options map[string]string) (*api.API, error) {
 	request, err := newCodeGeneratorRequest(source, options)
@@ -142,7 +142,6 @@ func newCompilerVersion() *pluginpb.Version {
 
 const (
 	// From https://pkg.go.dev/google.golang.org/protobuf/types/descriptorpb#FileDescriptorProto
-
 	fileDescriptorName             = 1
 	fileDescriptorPackage          = 2
 	fileDescriptorDependency       = 3
@@ -158,12 +157,10 @@ const (
 	fileDescriptorEdition          = 14
 
 	// From https://pkg.go.dev/google.golang.org/protobuf/types/descriptorpb#ServiceDescriptorProto
-
 	serviceDescriptorProtoMethod = 2
 	serviceDescriptorProtoOption = 3
 
 	// From https://pkg.go.dev/google.golang.org/protobuf/types/descriptorpb#DescriptorProto
-
 	messageDescriptorField          = 2
 	messageDescriptorNestedType     = 3
 	messageDescriptorEnum           = 4
@@ -175,7 +172,6 @@ const (
 	messageDescriptorReservedName   = 10
 
 	// From https://pkg.go.dev/google.golang.org/protobuf/types/descriptorpb#EnumDescriptorProto
-
 	enumDescriptorValue = 2
 )
 
@@ -636,7 +632,6 @@ func addEnumDocumentation(state *api.APIState, p []int32, doc string, eFQN strin
 	}
 }
 
-// trimLeadingSpacesInDocumentation removes the leading spaces from each line in the documentation.
 // Protobuf removes the `//` leading characters, but leaves the leading
 // whitespace. It is easier to reason about the comments in the rest of the
 // generator if they are better normalized.

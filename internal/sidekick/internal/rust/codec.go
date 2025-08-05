@@ -34,7 +34,7 @@ import (
 	"github.com/yuin/goldmark/text"
 )
 
-// commentUrlRegex is a regular expression to find https links in comments.
+// A regular expression to find https links in comments.
 //
 // The Google API documentation (typically in protos) includes some raw HTTP[S]
 // links. While many markdown implementations autolink, Rustdoc does not. It
@@ -486,8 +486,7 @@ func mapType(f *api.Field, state *api.APIState, modulePath, sourceSpecificationP
 	}
 }
 
-// baseFieldType returns the field type, ignoring any repeated or optional
-// attributes.
+// Returns the field type, ignoring any repeated or optional attributes.
 func baseFieldType(f *api.Field, state *api.APIState, modulePath, sourceSpecificationPackageName string, packageMapping map[string]*packagez) string {
 	switch f.Typez {
 	case api.MESSAGE_TYPE:
@@ -705,8 +704,8 @@ func httpPathFmt(t *api.PathTemplate) string {
 	return fmt
 }
 
-// toSnake converts a name to `snake_case`. The Rust naming conventions use
-// this style for modules, fields, and functions.
+// Convert a name to `snake_case`. The Rust naming conventions use this style
+// for modules, fields, and functions.
 //
 // This type of conversion can easily introduce keywords. Consider
 //
@@ -722,10 +721,9 @@ func toSnakeNoMangling(symbol string) string {
 	return strcase.ToSnake(symbol)
 }
 
-// toPascal converts a name to `PascalCase`.  Strangely, the `strcase` package
-// calls this `ToCamel` while usually `camelCase` starts with a lowercase
-// letter. The Rust naming conventions use this style for structs, enums and
-// traits.
+// Convert a name to `PascalCase`.  Strangely, the `strcase` package calls this
+// `ToCamel` while usually `camelCase` starts with a lowercase letter. The
+// Rust naming conventions use this style for structs, enums and traits.
 //
 // This type of conversion rarely introduces keywords. The one example is
 //
@@ -756,8 +754,8 @@ func toCamel(symbol string) string {
 	return escapeKeyword(strcase.ToLowerCamel(symbol))
 }
 
-// toScreamingSnake converts a name to `SCREAMING_SNAKE_CASE`. The Rust naming
-// conventions use this style for constants.
+// Convert a name to `SCREAMING_SNAKE_CASE`. The Rust naming conventions use
+// this style for constants.
 func toScreamingSnake(symbol string) string {
 	if strings.ToUpper(symbol) == symbol {
 		return symbol
@@ -765,13 +763,10 @@ func toScreamingSnake(symbol string) string {
 	return strcase.ToScreamingSnake(symbol)
 }
 
-// formatDocComments formats blockquotes which requires special treatment for
-// Rust.
-//
-// By default, Rust assumes blockquotes contain compilable Rust code
-// samples. To override the default the blockquote must be marked with
-// "```norust". The proto comments have many blockquotes that do not follow
-// this convention (nor should they).
+// Blockquotes require special treatment for Rust. By default, Rust assumes
+// blockquotes contain compilable Rust code samples. To override the default
+// the blockquote must be marked with "```norust". The proto comments have
+// many blockquotes that do not follow this convention (nor should they).
 //
 // This function handles some easy cases of blockquotes, but a full treatment
 // requires parsing of the comments. The CommonMark [spec] includes some
@@ -848,8 +843,8 @@ func (c *codec) formatDocComments(
 	return results
 }
 
-// protobufLinkMapping returns additional comment lines to map protobuf links
-// to Rustdoc links.
+// protobufLinks() returns additional comment lines to map protobuf links to
+// Rustdoc links.
 //
 // Protobuf comments include links in the form `[Title][Definition]` where
 // `Title` is the text that should appear in the documentation and `Definition`
@@ -884,8 +879,7 @@ func protobufLinkMapping(doc ast.Node, source []byte) []string {
 	return sortedLinks
 }
 
-// commentCrossReferenceLink  is a regular expression to find cross links in
-// comments.
+// A regular expression to find cross links in comments.
 //
 // The Google API documentation (typically in protos) include links to code
 // elements in the form `[Thing][google.package.blah.v1.Thing.SubThing]`.
@@ -901,8 +895,7 @@ var commentCrossReferenceLink = regexp.MustCompile(
 		`)*` + // zero or more times
 		`\]`) // The closing bracket
 
-// commentImpliedCrossReferenceLink is a regular expression to find implied
-// cross reference links.
+// A regular expression to find implied cross reference links.
 var commentImpliedCrossReferenceLink = regexp.MustCompile(
 	`` + // `go fmt` is annoying
 		`\[` +
@@ -981,8 +974,7 @@ func isWithinCodeSpan(node ast.Node) bool {
 	return false
 }
 
-// escapeUrls encloses standalone URLs with angled brackets and escape
-// placeholders.
+// Encloses standalone URLs with angled brackets and escape placeholders.
 func escapeUrls(line string) string {
 	var escapedLine strings.Builder
 	lastIndex := 0
@@ -1029,7 +1021,7 @@ func escapeUrls(line string) string {
 	return escapedLine.String()
 }
 
-// isLinkDestination verifies whether the url is part of a link destination.
+// Verifies whether the url is part of a link destination.
 func isLinkDestination(line string, matchStart, matchEnd int) bool {
 	return strings.HasSuffix(line[:matchStart], "](") && line[matchEnd] == ')'
 }
@@ -1445,8 +1437,9 @@ func (c *codec) generateMethod(m *api.Method) bool {
 	return m.PathInfo.Bindings[0].PathTemplate != nil
 }
 
-// escapeKeyword is the list of Rust keywords and reserved words can be found
-// at https://doc.rust-lang.org/reference/keywords.html.
+// The list of Rust keywords and reserved words can be found at:
+//
+//	https://doc.rust-lang.org/reference/keywords.html
 func escapeKeyword(symbol string) string {
 	keywords := map[string]bool{
 		"as":       true,

@@ -64,7 +64,7 @@ func (m *modelAnnotations) HasDependencies() bool {
 	return len(m.PackageDependencies) > 0
 }
 
-// HasDevDependencies returns whether the generated package specified any dev_dependencies.
+// Whether the generated package specified any dev_dependencies.
 func (m *modelAnnotations) HasDevDependencies() bool {
 	return len(m.DevDependencies) > 0
 }
@@ -335,7 +335,7 @@ func calculateRequiredFields(model *api.API) map[string]*api.Field {
 	return required
 }
 
-// calculateDependencies calculates package dependencies based on `package:` imports.
+// Calculate package dependencies based on `package:` imports.
 func calculateDependencies(imports map[string]string) []packageDependency {
 	var deps []packageDependency
 
@@ -704,7 +704,7 @@ func createToJsonLine(field *api.Field, state *api.APIState, required bool) stri
 	return name
 }
 
-// buildQueryLines builds a string or strings representing query parameters for the given field.
+// Build a string or strings representing query parameters for the given field.
 //
 // Docs on the format are at
 // https://github.com/googleapis/googleapis/blob/master/google/api/http.proto.

@@ -117,7 +117,7 @@ func loadMixinMethods(serviceConfig *serviceconfig.Service) mixinMethods {
 	return enabledMixinMethods
 }
 
-// applyServiceConfigMethodOverrides applies `serviceConfig` overrides to `targetMethod`.
+// Apply `serviceConfig` overrides to `targetMethod`.
 //
 // The service config file may include overrides to mixin method definitions.
 // These overrides reference the original fully-qualified name of the method,

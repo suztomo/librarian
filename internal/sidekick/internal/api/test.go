@@ -69,7 +69,7 @@ func NewTestAPI(messages []*Message, enums []*Enum, services []*Service) *API {
 	}
 }
 
-// parentName returns the parent's name from a fully qualified identifier.
+// Creates a populated API state from lists of messages, enums, and services.
 func parentName(id string) string {
 	if lastIndex := strings.LastIndex(id, "."); lastIndex != -1 {
 		return id[:lastIndex]

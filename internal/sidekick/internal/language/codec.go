@@ -20,7 +20,7 @@ import (
 	"github.com/googleapis/librarian/internal/sidekick/internal/api"
 )
 
-// GeneratedFile represents an input template and its corresponding output file.
+// This represents an input template and its corresponding output file.
 type GeneratedFile struct {
 	// The name of the template file, relative to the Codec's filesystem root.
 	TemplatePath string
@@ -28,7 +28,7 @@ type GeneratedFile struct {
 	OutputPath string
 }
 
-// TemplateProvider is a provider for Mustache template contents.
+// A provider for Mustache template contents.
 //
 // The function is expected to accept a template name, including its full path
 // and the `.mustache` extension, such as `rust/crate/src/lib.rs.mustache` and

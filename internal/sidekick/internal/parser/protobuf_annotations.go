@@ -27,7 +27,6 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-// normalizeTypeID normalizes the types in LRO annotations.
 // The types in LRO annotations sometimes (always?) are missing the leading `.`.
 // We need to add them so they are useful when searching in
 // `state.MessageByID[]`.
