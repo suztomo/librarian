@@ -77,17 +77,6 @@ func TestRunGenerateCommand(t *testing.T) {
 			}
 
 			outputDir := t.TempDir()
-			// Write a generate-response.json because it is required by generate
-			// command.
-			if err := os.MkdirAll(outputDir, 0755); err != nil {
-				t.Fatal(err)
-			}
-
-			libraryStr := "{}"
-			if err := os.WriteFile(filepath.Join(outputDir, config.GenerateResponse), []byte(libraryStr), 0755); err != nil {
-				t.Fatal(err)
-			}
-
 			gotLibraryID, err := r.runGenerateCommand(context.Background(), "some-library", outputDir)
 			if (err != nil) != test.wantErr {
 				t.Errorf("runGenerateCommand() error = %v, wantErr %v", err, test.wantErr)
@@ -152,6 +141,7 @@ func TestRunBuildCommand(t *testing.T) {
 				state:           test.state,
 				containerClient: test.container,
 			}
+
 			err := r.runBuildCommand(context.Background(), test.libraryID)
 			if test.wantErr {
 				if err == nil {
@@ -223,7 +213,9 @@ func TestRunConfigureCommand(t *testing.T) {
 					},
 				},
 			},
-			container:          &mockContainerClient{},
+			container: &mockContainerClient{
+				wantErrorMsg: true,
+			},
 			wantConfigureCalls: 1,
 			wantErr:            true,
 		},
@@ -239,7 +231,9 @@ func TestRunConfigureCommand(t *testing.T) {
 					},
 				},
 			},
-			container:          &mockContainerClient{},
+			container: &mockContainerClient{
+				noConfigureResponse: true,
+			},
 			wantConfigureCalls: 1,
 			wantErr:            true,
 		},
@@ -284,28 +278,6 @@ func TestRunConfigureCommand(t *testing.T) {
 
 				data := []byte("type: google.api.Service")
 				if err := os.WriteFile(filepath.Join(cfg.APISource, test.api, "example_service_v2.yaml"), data, 0755); err != nil {
-					t.Fatal(err)
-				}
-
-				// Write a configure-response.json because it is required by configure
-				// command.
-				if err := os.MkdirAll(filepath.Join(r.repo.GetDir(), config.LibrarianDir), 0755); err != nil {
-					t.Fatal(err)
-				}
-
-				libraryStr := ""
-				if test.name == "configures library successfully" {
-					libraryStr = fmt.Sprintf(`{
-	"ID": "%s"
-}`, test.state.Libraries[0].ID)
-				} else {
-					libraryStr = fmt.Sprintf(`{
-	"ID": "%s",
-  "error": "simulated error message"
-}`, test.state.Libraries[0].ID)
-				}
-
-				if err := os.WriteFile(filepath.Join(r.repo.GetDir(), config.LibrarianDir, config.ConfigureResponse), []byte(libraryStr), 0755); err != nil {
 					t.Fatal(err)
 				}
 			}
