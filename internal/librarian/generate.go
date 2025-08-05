@@ -300,7 +300,18 @@ func (r *generateRunner) runBuildCommand(ctx context.Context, libraryID string) 
 		RepoDir:   r.repo.GetDir(),
 	}
 	slog.Info("Build requested for library", "id", libraryID)
-	return r.containerClient.Build(ctx, buildRequest)
+	if err := r.containerClient.Build(ctx, buildRequest); err != nil {
+		return err
+	}
+
+	// Read the library state from the response.
+	_, err := readLibraryState(
+		func(data []byte, libraryState *config.LibraryState) error {
+			return json.Unmarshal(data, libraryState)
+		},
+		filepath.Join(buildRequest.RepoDir, config.LibrarianDir, config.BuildResponse))
+
+	return err
 }
 
 // clean removes files and directories from a root directory based on remove and preserve patterns.

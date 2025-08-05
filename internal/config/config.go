@@ -26,6 +26,9 @@ import (
 const (
 	// BuildRequest is a JSON file that describes which library to build/test.
 	BuildRequest = "build-request.json"
+	// BuildResponse is a JSON file that describes which library to change after
+	// built/test.
+	BuildResponse = "build-response.json"
 	// ConfigureRequest is a JSON file that describes which library to configure.
 	ConfigureRequest = "configure-request.json"
 	// ConfigureResponse is a JSON file that describes which library to change
