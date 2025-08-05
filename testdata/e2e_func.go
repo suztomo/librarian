@@ -10,15 +10,15 @@ import (
 )
 
 const (
-	inputDir                 = "input"
-	librarian                = "librarian"
-	outputDir                = "output"
-	source                   = "source"
-	configureRequest         = "configure-request.json"
-	configureResponse        = "configure-response.json"
-	generateRequest          = "generate-request.json"
-	generateResponse         = "generate-response.json"
-	simulateConfigureErrorID = "simulate-configure-error-id"
+	inputDir               = "input"
+	librarian              = "librarian"
+	outputDir              = "output"
+	source                 = "source"
+	configureRequest       = "configure-request.json"
+	configureResponse      = "configure-response.json"
+	generateRequest        = "generate-request.json"
+	generateResponse       = "generate-response.json"
+	simulateCommandErrorID = "simulate-command-error-id"
 )
 
 func main() {
@@ -67,7 +67,7 @@ func doGenerate(args []string) error {
 		return err
 	}
 
-	return writeToOutput(request)
+	return writeGenerateResponse(request)
 }
 
 func parseConfigureRequest(args []string) (*configureOption, error) {
@@ -130,7 +130,7 @@ func readConfigureRequest(path string) (*libraryState, error) {
 		return nil, err
 	}
 
-	if library.ID == simulateConfigureErrorID {
+	if library.ID == simulateCommandErrorID {
 		// Simulate a configure command error
 		return nil, errors.New("simulate configure command error")
 	}
@@ -159,8 +159,8 @@ func writeConfigureResponse(option *configureOption, library *libraryState) erro
 	return nil
 }
 
-func writeToOutput(option *generateOption) (err error) {
-	jsonFilePath := filepath.Join(option.outputDir, generateResponse)
+func writeGenerateResponse(option *generateOption) (err error) {
+	jsonFilePath := filepath.Join(option.librarianDir, generateResponse)
 	jsonFile, err := os.Create(jsonFilePath)
 	if err != nil {
 		return err
@@ -170,20 +170,16 @@ func writeToOutput(option *generateOption) (err error) {
 	}()
 
 	dataMap := map[string]string{}
-	if option.libraryID == simulateConfigureErrorID {
+	if option.libraryID == simulateCommandErrorID {
 		dataMap["error"] = "simulated generation error"
 	}
 	data, err := json.MarshalIndent(dataMap, "", "  ")
 	if err != nil {
 		return err
 	}
-	if _, err := jsonFile.Write(data); err != nil {
-		return err
-	}
-	if option.libraryID == simulateConfigureErrorID {
-		return errors.New("generation failed due to invalid library id")
-	}
-	return nil
+	_, err = jsonFile.Write(data)
+
+	return err
 }
 
 func populateAdditionalFields(library *libraryState) *libraryState {

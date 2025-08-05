@@ -48,7 +48,7 @@ func TestRunGenerate(t *testing.T) {
 		},
 		{
 			name:    "non existent in api source",
-			api:     "google/non-existent/path",
+			api:     "google/cloud/future/v2",
 			wantErr: true,
 		},
 	} {
@@ -82,7 +82,7 @@ func TestRunGenerate(t *testing.T) {
 				t.Fatalf("librarian generate command error = %v", err)
 			}
 
-			responseFile := filepath.Join(workRoot, "output", "generate-response.json")
+			responseFile := filepath.Join(repo, ".librarian", "generate-response.json")
 			if _, err := os.Stat(responseFile); err != nil {
 				t.Fatalf("can not find generate response, error = %v", err)
 			}
@@ -128,7 +128,7 @@ func TestRunConfigure(t *testing.T) {
 		{
 			name:         "failed due to simulated error in configure command",
 			api:          "google/cloud/another-library/v3",
-			library:      "simulate-configure-error-id",
+			library:      "simulate-command-error-id",
 			apiSource:    "testdata/e2e/configure/api_root",
 			updatedState: "testdata/e2e/configure/updated-state.yaml",
 			wantErr:      true,
