@@ -63,7 +63,7 @@ func (m *modelAnnotations) IsWktCrate() bool {
 	return m.PackageName == "google-cloud-wkt"
 }
 
-// HasServices returns true if there are any services in the model.
+// HasServices returns true if there are any services in the model
 func (m *modelAnnotations) HasServices() bool {
 	return len(m.Services) > 0
 }
@@ -283,14 +283,14 @@ type bindingSubstitution struct {
 // This array is supplied as an argument to `gaxi::path_parameter::try_match()`,
 // and `gaxi::path_parameter::PathMismatchBuilder`.
 //
-// e.g.: `&[Segment::Literal("projects/"), Segment::SingleWildcard]`.
+// e.g.: `&[Segment::Literal("projects/"), Segment::SingleWildcard]`
 func (s *bindingSubstitution) TemplateAsArray() string {
 	return "&[" + strings.Join(annotateSegments(s.Template), ", ") + "]"
 }
 
 // The expected template, which can be used as a static string.
 //
-// e.g.: "projects/*".
+// e.g.: "projects/*"
 func (s *bindingSubstitution) TemplateAsString() string {
 	return strings.Join(s.Template, "/")
 }
@@ -585,10 +585,14 @@ func (c *codec) addFeatureAnnotations(model *api.API, ann *modelAnnotations) {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // packageToModuleName maps "google.foo.v1" to "google::foo::v1".
 =======
 // Maps "google.foo.v1" to "google::foo::v1"
 >>>>>>> parent of 27ff7c8e (fix(internal/sidekick): fix godoclint errors (#1554))
+=======
+// packageToModuleName maps "google.foo.v1" to "google::foo::v1"
+>>>>>>> parent of 849127ec (fix(golangci-lint): fix errors in internal/sidekick (#1575))
 func packageToModuleName(p string) string {
 	components := strings.Split(p, ".")
 	for i, c := range components {
@@ -776,8 +780,8 @@ func annotateSegments(segments []string) []string {
 		literalBuffer = ""
 	}
 	for index, segment := range segments {
-		switch segment {
-		case api.MultiSegmentWildcard:
+		switch {
+		case segment == api.MultiSegmentWildcard:
 			flushBuffer()
 			if len(segments) == 1 {
 				ann = append(ann, "Segment::MultiWildcard")
@@ -786,7 +790,7 @@ func annotateSegments(segments []string) []string {
 			} else {
 				ann = append(ann, "Segment::TrailingMultiWildcard")
 			}
-		case api.SingleSegmentWildcard:
+		case segment == api.SingleSegmentWildcard:
 			if index != 0 {
 				literalBuffer += "/"
 			}

@@ -23,7 +23,11 @@ import (
 func TestDartFromProtobuf(t *testing.T) {
 	requireProtoc(t)
 
-	outDir := t.TempDir()
+	outDir, err := os.MkdirTemp(t.TempDir(), "golden")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(outDir)
 
 	svcConfig := path.Join(testdataDir, "googleapis/google/cloud/secretmanager/v1/secretmanager_v1.yaml")
 	specificationSource := path.Join(testdataDir, "googleapis/google/cloud/secretmanager/v1")

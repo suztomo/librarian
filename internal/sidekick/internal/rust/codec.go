@@ -488,8 +488,7 @@ func mapType(f *api.Field, state *api.APIState, modulePath, sourceSpecificationP
 
 // Returns the field type, ignoring any repeated or optional attributes.
 func baseFieldType(f *api.Field, state *api.APIState, modulePath, sourceSpecificationPackageName string, packageMapping map[string]*packagez) string {
-	switch f.Typez {
-	case api.MESSAGE_TYPE:
+	if f.Typez == api.MESSAGE_TYPE {
 		m, ok := state.MessageByID[f.TypezID]
 		if !ok {
 			slog.Error("unable to lookup type", "id", f.TypezID, "field", f.ID)
@@ -501,19 +500,18 @@ func baseFieldType(f *api.Field, state *api.APIState, modulePath, sourceSpecific
 			return "std::collections::HashMap<" + key + "," + val + ">"
 		}
 		return fullyQualifiedMessageName(m, modulePath, sourceSpecificationPackageName, packageMapping)
-	case api.ENUM_TYPE:
+	} else if f.Typez == api.ENUM_TYPE {
 		e, ok := state.EnumByID[f.TypezID]
 		if !ok {
 			slog.Error("unable to lookup type", "id", f.TypezID, "field", f.ID)
 			return ""
 		}
 		return fullyQualifiedEnumName(e, modulePath, sourceSpecificationPackageName, packageMapping)
-	case api.GROUP_TYPE:
+	} else if f.Typez == api.GROUP_TYPE {
 		slog.Error("TODO(#39) - better handling of `oneof` fields")
 		return ""
-	default:
-		return scalarFieldType(f)
 	}
+	return scalarFieldType(f)
 }
 
 func addQueryParameter(f *api.Field) string {

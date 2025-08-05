@@ -15,15 +15,14 @@
 package parser
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 
+	"github.com/ghodss/yaml"
 	"github.com/googleapis/librarian/internal/sidekick/internal/config"
 	"google.golang.org/genproto/googleapis/api/serviceconfig"
 	"google.golang.org/protobuf/encoding/protojson"
-	"gopkg.in/yaml.v3"
 )
 
 func readServiceConfig(serviceConfigPath string) (*serviceconfig.Service, error) {
@@ -32,11 +31,7 @@ func readServiceConfig(serviceConfigPath string) (*serviceconfig.Service, error)
 		return nil, fmt.Errorf("error reading service config [%s]: %w", serviceConfigPath, err)
 	}
 
-	var yamlData interface{}
-	if err := yaml.Unmarshal(y, &yamlData); err != nil {
-		return nil, fmt.Errorf("error parsing YAML [%s]: %w", serviceConfigPath, err)
-	}
-	j, err := json.Marshal(yamlData)
+	j, err := yaml.YAMLToJSON(y)
 	if err != nil {
 		return nil, fmt.Errorf("error converting YAML to JSON [%s]: %w", serviceConfigPath, err)
 	}
@@ -58,7 +53,7 @@ func readServiceConfig(serviceConfigPath string) (*serviceconfig.Service, error)
 //
 // The service config files are specified as relative to the `googleapis-root`
 // path (or `extra-protos-root` when set). This finds the right path given a
-// configuration.
+// configuration
 func findServiceConfigPath(serviceConfigFile string, options map[string]string) string {
 	for _, opt := range config.SourceRoots(options) {
 		dir, ok := options[opt]

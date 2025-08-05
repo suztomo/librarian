@@ -36,7 +36,6 @@ const (
 	defaultGitHub    = "https://github.com"
 	repo             = "googleapis/googleapis"
 	branch           = "master"
-	configName       = ".sidekick.toml"
 )
 
 // Describe overrides for the documentation of a single element.
@@ -79,7 +78,7 @@ type GeneralConfig struct {
 // Where applicable, overrides the top level (or default) configuration values with the ones passed in the command line.
 // Returns the merged configuration, or an error if the top level configuration is invalid.
 func LoadConfig(language string, source, codec map[string]string) (*Config, error) {
-	rootConfig, err := LoadRootConfig(configName)
+	rootConfig, err := LoadRootConfig(".sidekick.toml")
 	if err != nil {
 		return nil, err
 	}

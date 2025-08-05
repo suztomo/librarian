@@ -37,7 +37,8 @@ type goImport struct {
 
 // Generate generates Go code from the model.
 func Generate(model *api.API, outdir string, cfg *config.Config) error {
-	if err := annotateModel(model, cfg.Codec); err != nil {
+	_, err := annotateModel(model, cfg.Codec)
+	if err != nil {
 		return err
 	}
 	provider := templatesProvider()

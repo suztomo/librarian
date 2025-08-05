@@ -15,13 +15,18 @@
 package sidekick
 
 import (
+	"os"
 	"path"
 	"testing"
 )
 
 func TestRustProstConvert(t *testing.T) {
 	requireProtoc(t)
-	outDir := t.TempDir()
+	outDir, err := os.MkdirTemp(t.TempDir(), "golden")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(outDir)
 
 	type TestConfig struct {
 		Source        string
