@@ -10,15 +10,16 @@ import (
 )
 
 const (
-	inputDir               = "input"
-	librarian              = "librarian"
-	outputDir              = "output"
-	source                 = "source"
 	configureRequest       = "configure-request.json"
 	configureResponse      = "configure-response.json"
 	generateRequest        = "generate-request.json"
 	generateResponse       = "generate-response.json"
+	id                     = "id"
+	inputDir               = "input"
+	librarian              = "librarian"
+	outputDir              = "output"
 	simulateCommandErrorID = "simulate-command-error-id"
+	source                 = "source"
 )
 
 func main() {
@@ -50,7 +51,7 @@ func doConfigure(args []string) error {
 		return err
 	}
 
-	library, err := readConfigureRequest(filepath.Join(request.librarianDir, configureRequest))
+	library, err := readCommandRequest(filepath.Join(request.librarianDir, configureRequest))
 	if err != nil {
 		return err
 	}
@@ -59,11 +60,15 @@ func doConfigure(args []string) error {
 }
 
 func doGenerate(args []string) error {
-	request, err := parseGenerateRequest(args)
+	request, err := parseGenerateOption(args)
 	if err != nil {
 		return err
 	}
 	if err := validateLibrarianDir(request.librarianDir, generateRequest); err != nil {
+		return err
+	}
+
+	if _, err := readCommandRequest(filepath.Join(request.librarianDir, generateRequest)); err != nil {
 		return err
 	}
 
@@ -90,7 +95,7 @@ func parseConfigureRequest(args []string) (*configureOption, error) {
 	return configureOption, nil
 }
 
-func parseGenerateRequest(args []string) (*generateOption, error) {
+func parseGenerateOption(args []string) (*generateOption, error) {
 	generateOption := &generateOption{}
 	for _, arg := range args {
 		option, _ := strings.CutPrefix(arg, "--")
@@ -120,7 +125,9 @@ func validateLibrarianDir(dir, requestFile string) error {
 	return nil
 }
 
-func readConfigureRequest(path string) (*libraryState, error) {
+// readCommandRequest reads the command request file, e.g., configure-request.json
+// or generate-request.json.
+func readCommandRequest(path string) (*libraryState, error) {
 	library := &libraryState{}
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -131,8 +138,8 @@ func readConfigureRequest(path string) (*libraryState, error) {
 	}
 
 	if library.ID == simulateCommandErrorID {
-		// Simulate a configure command error
-		return nil, errors.New("simulate configure command error")
+		// Simulate a command error
+		return nil, errors.New("simulate command error")
 	}
 
 	return library, nil
@@ -170,14 +177,12 @@ func writeGenerateResponse(option *generateOption) (err error) {
 	}()
 
 	dataMap := map[string]string{}
-	if option.libraryID == simulateCommandErrorID {
-		dataMap["error"] = "simulated generation error"
-	}
 	data, err := json.MarshalIndent(dataMap, "", "  ")
 	if err != nil {
 		return err
 	}
 	_, err = jsonFile.Write(data)
+	log.Print("write generate response to " + jsonFilePath)
 
 	return err
 }
@@ -202,7 +207,6 @@ type generateOption struct {
 	intputDir    string
 	outputDir    string
 	librarianDir string
-	libraryID    string
 	sourceDir    string
 }
 

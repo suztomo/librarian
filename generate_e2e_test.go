@@ -18,7 +18,6 @@
 package librarian
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
@@ -47,7 +46,7 @@ func TestRunGenerate(t *testing.T) {
 			api:  "google/cloud/pubsub/v1",
 		},
 		{
-			name:    "non existent in api source",
+			name:    "failed due to simulated error in generate command",
 			api:     "google/cloud/future/v2",
 			wantErr: true,
 		},
@@ -76,29 +75,18 @@ func TestRunGenerate(t *testing.T) {
 				if err == nil {
 					t.Fatalf("%s should fail", test.name)
 				}
+
+				// the exact message is not populated here, but we can check it's
+				// indeed an error returned from docker container.
+				if g, w := err.Error(), "exit status 1"; !strings.Contains(g, w) {
+					t.Fatalf("got %q, wanted it to contain %q", g, w)
+				}
+
 				return
 			}
+
 			if err != nil {
 				t.Fatalf("librarian generate command error = %v", err)
-			}
-
-			responseFile := filepath.Join(repo, ".librarian", "generate-response.json")
-			if _, err := os.Stat(responseFile); err != nil {
-				t.Fatalf("can not find generate response, error = %v", err)
-			}
-
-			if test.wantErr {
-				data, err := os.ReadFile(responseFile)
-				if err != nil {
-					t.Fatalf("ReadFile() error = %v", err)
-				}
-				content := &genResponse{}
-				if err := json.Unmarshal(data, content); err != nil {
-					t.Fatalf("Unmarshal() error = %v", err)
-				}
-				if content.ErrorMessage == "" {
-					t.Fatalf("can not find error message in generate response")
-				}
 			}
 		})
 	}
@@ -184,7 +172,7 @@ func TestRunConfigure(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(string(wantBytes), string(gotBytes)); diff != "" {
-				t.Errorf("Generated yaml mismatch (-want +got):\n%s", diff)
+				t.Fatalf("Generated yaml mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
