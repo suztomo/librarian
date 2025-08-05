@@ -103,6 +103,9 @@ func (m *mockContainerClient) Build(ctx context.Context, request *docker.BuildRe
 	}
 
 	libraryStr := "{}"
+	if m.wantErrorMsg {
+		libraryStr = "{error: simulated error message}"
+	}
 	if err := os.WriteFile(filepath.Join(request.RepoDir, ".librarian", config.BuildResponse), []byte(libraryStr), 0755); err != nil {
 		return err
 	}

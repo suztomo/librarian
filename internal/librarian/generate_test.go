@@ -147,6 +147,23 @@ func TestRunBuildCommand(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:      "build with error response in response",
+			build:     true,
+			libraryID: "some-library",
+			repo:      newTestGitRepo(t),
+			state: &config.LibrarianState{
+				Libraries: []*config.LibraryState{
+					{
+						ID: "some-library",
+					},
+				},
+			},
+			container: &mockContainerClient{
+				wantErrorMsg: true,
+			},
+			wantErr: true,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
