@@ -21,15 +21,23 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+<<<<<<< HEAD
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+=======
+	"time"
+
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/go-git/go-git/v5/plumbing/object"
+>>>>>>> parent of e197cb6d (chore(internal/config): remove `PushConfig` flag (#1526))
 )
 
 // Repository defines the interface for git repository operations.
 type Repository interface {
 	AddAll() (git.Status, error)
-	Commit(msg string) error
+	Commit(msg string, userName, userEmail string) error
 	IsClean() (bool, error)
 	Remotes() ([]*git.Remote, error)
 	GetDir() string
@@ -143,7 +151,7 @@ func (r *LocalRepository) AddAll() (git.Status, error) {
 
 // Commit creates a new commit with the provided message and author
 // information.
-func (r *LocalRepository) Commit(msg string) error {
+func (r *LocalRepository) Commit(msg string, userName, userEmail string) error {
 	worktree, err := r.repo.Worktree()
 	if err != nil {
 		return err
@@ -156,8 +164,13 @@ func (r *LocalRepository) Commit(msg string) error {
 	if status.IsClean() {
 		return fmt.Errorf("no modifications to commit")
 	}
-	// The author of the commit will be read from git config.
-	hash, err := worktree.Commit(msg, &git.CommitOptions{})
+	hash, err := worktree.Commit(msg, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  userName,
+			Email: userEmail,
+			When:  time.Now(),
+		},
+	})
 	if err != nil {
 		return err
 	}

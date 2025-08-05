@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5"
-	goGitConfig "github.com/go-git/go-git/v5/config"
+	gogitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	"github.com/google/go-cmp/cmp"
 )
@@ -367,33 +367,15 @@ func TestAddAll(t *testing.T) {
 
 func TestCommit(t *testing.T) {
 	t.Parallel()
-	name, email := "tester", "tester@example.com"
 	// setupRepo is a helper to create a repository with an initial commit.
 	setupRepo := func(t *testing.T) *LocalRepository {
 		t.Helper()
 		dir := t.TempDir()
-		goGitRepo, err := git.PlainInit(dir, false)
+		gogitRepo, err := git.PlainInit(dir, false)
 		if err != nil {
 			t.Fatalf("git.PlainInit failed: %v", err)
 		}
-
-		author := struct {
-			Name  string
-			Email string
-		}{
-			Name:  name,
-			Email: email,
-		}
-		config, err := goGitRepo.Config()
-		if err != nil {
-			t.Fatalf("gitRepo.Config failed: %v", err)
-		}
-		config.User = author
-		if err := goGitRepo.SetConfig(config); err != nil {
-			t.Fatalf("gitRepo.SetConfig failed: %v", err)
-		}
-
-		w, err := goGitRepo.Worktree()
+		w, err := gogitRepo.Worktree()
 		if err != nil {
 			t.Fatalf("Worktree() failed: %v", err)
 		}
@@ -403,13 +385,15 @@ func TestCommit(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("initial commit failed: %v", err)
 		}
-		return &LocalRepository{Dir: dir, repo: goGitRepo}
+		return &LocalRepository{Dir: dir, repo: gogitRepo}
 	}
 
 	for _, tc := range []struct {
 		name       string
 		setup      func(t *testing.T) *LocalRepository
 		commitMsg  string
+		userName   string
+		userEmail  string
 		wantErr    bool
 		wantErrMsg string
 		check      func(t *testing.T, repo *LocalRepository, commitMsg string)
@@ -433,6 +417,8 @@ func TestCommit(t *testing.T) {
 				return repo
 			},
 			commitMsg: "feat: add new file",
+			userName:  "tester",
+			userEmail: "tester@example.com",
 			check: func(t *testing.T, repo *LocalRepository, commitMsg string) {
 				head, err := repo.repo.Head()
 				if err != nil {
@@ -460,6 +446,8 @@ func TestCommit(t *testing.T) {
 				return setupRepo(t)
 			},
 			commitMsg:  "no-op",
+			userName:   "tester",
+			userEmail:  "tester@example.com",
 			wantErr:    true,
 			wantErrMsg: "no modifications to commit",
 		},
@@ -468,13 +456,15 @@ func TestCommit(t *testing.T) {
 			setup: func(t *testing.T) *LocalRepository {
 				dir := t.TempDir()
 				// Create a bare repository which has no worktree.
-				goGitRepo, err := git.PlainInit(dir, true)
+				gogitRepo, err := git.PlainInit(dir, true)
 				if err != nil {
 					t.Fatalf("git.PlainInit failed: %v", err)
 				}
-				return &LocalRepository{Dir: dir, repo: goGitRepo}
+				return &LocalRepository{Dir: dir, repo: gogitRepo}
 			},
 			commitMsg:  "any message",
+			userName:   "tester",
+			userEmail:  "tester@example.com",
 			wantErr:    true,
 			wantErrMsg: "worktree not available",
 		},
@@ -507,6 +497,8 @@ func TestCommit(t *testing.T) {
 				return repo
 			},
 			commitMsg:  "any message",
+			userName:   "tester",
+			userEmail:  "tester@example.com",
 			wantErr:    true,
 			wantErrMsg: "permission denied",
 		},
@@ -515,7 +507,7 @@ func TestCommit(t *testing.T) {
 			t.Parallel()
 			repo := tc.setup(t)
 
-			err := repo.Commit(tc.commitMsg)
+			err := repo.Commit(tc.commitMsg, tc.userName, tc.userEmail)
 
 			if tc.wantErr {
 				if err == nil {
@@ -572,7 +564,7 @@ func TestRemotes(t *testing.T) {
 			}
 
 			for name, urls := range tt.setupRemotes {
-				if _, err := gogitRepo.CreateRemote(&goGitConfig.RemoteConfig{
+				if _, err := gogitRepo.CreateRemote(&gogitConfig.RemoteConfig{
 					Name: name,
 					URLs: urls,
 				}); err != nil {

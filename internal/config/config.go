@@ -128,6 +128,18 @@ type Config struct {
 	// Push is specified with the -push flag. No value is required.
 	Push bool
 
+	// PushConfig specifies the email address and display name used in Git commits,
+	// in the format "email,name".
+	//
+	// PushConfig is used in all commands that create commits in a language repository:
+	// create-release-pr, configure and update-apis.
+	//
+	// PushConfig is optional. If unspecified, commits will use a default name of
+	// "Google Cloud SDK" and a default email of noreply-cloudsdk@google.com.
+	//
+	// PushConfig is specified with the -push-config flag.
+	PushConfig string
+
 	// Repo specifies the language repository to use, as either a local root directory
 	// or a URL to clone from. If a local directory is specified, it can
 	// be relative to the current working directory. The repository must
@@ -175,6 +187,7 @@ type Config struct {
 func New() *Config {
 	return &Config{
 		GitHubToken: os.Getenv("LIBRARIAN_GITHUB_TOKEN"),
+		PushConfig:  "",
 	}
 }
 
@@ -200,6 +213,10 @@ func (c *Config) IsValid() (bool, error) {
 		return false, errors.New("no GitHub token supplied for push")
 	}
 
+	if _, err := validatePushConfig(c.PushConfig, ""); err != nil {
+		return false, err
+	}
+
 	if _, err := validateHostMount(c.HostMount, ""); err != nil {
 		return false, err
 	}
@@ -215,6 +232,19 @@ func validateHostMount(hostMount, defaultValue string) (bool, error) {
 	parts := strings.Split(hostMount, ":")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return false, errors.New("unable to parse host mount")
+	}
+
+	return true, nil
+}
+
+func validatePushConfig(pushConfig, defaultValue string) (bool, error) {
+	if pushConfig == defaultValue {
+		return true, nil
+	}
+
+	parts := strings.Split(pushConfig, ",")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return false, errors.New("unable to parse push config")
 	}
 
 	return true, nil
