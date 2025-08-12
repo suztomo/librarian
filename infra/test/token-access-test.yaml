@@ -33,7 +33,6 @@ steps:
       echo "ls -la ."
       ls -la .
       echo "Finding YAML files:"
-      find /workspace/librarian -name '*.yaml'
       ROBOT_ACCOUNT=cloud-sdk-librarian-robot
       if [[ $- == *x* ]]; then
         echo "xtrace is ON. Exiting to avoid credentials showing up in logs."
