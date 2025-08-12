@@ -32,7 +32,6 @@ steps:
       echo "pwd is $(pwd)"
       echo "ls -la ."
       ls -la .
-      echo "Finding YAML files:"
       ROBOT_ACCOUNT=cloud-sdk-librarian-robot
       if [[ $- == *x* ]]; then
         echo "xtrace is ON. Exiting to avoid credentials showing up in logs."
