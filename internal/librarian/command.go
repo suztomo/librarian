@@ -212,6 +212,16 @@ func cleanAndCopyLibrary(state *config.LibrarianState, repoDir, libraryID, outpu
 	return nil
 }
 
+// copyLibrary copies the new files from outputDir to repoDir, without cleaning the existing files.
+func copyLibrary(repoDir, libraryID, outputDir string) error {
+	slog.Info("Copying generated results for library", "id", libraryID)
+	if err := os.CopyFS(repoDir, os.DirFS(outputDir)); err != nil {
+		return err
+	}
+	slog.Info("Library updated", "id", libraryID)
+	return nil
+}
+
 // commitAndPush creates a commit and push request to GitHub for the generated
 // changes.
 // It uses the GitHub client to create a PR with the specified branch, title, and
