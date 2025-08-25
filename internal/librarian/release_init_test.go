@@ -91,7 +91,7 @@ func TestInitRun(t *testing.T) {
 		{
 			name: "run release init command for one library",
 			runner: &initRunner{
-				workRoot:        filepath.Join(t.TempDir(), "work-root"),
+				workRoot:        t.TempDir(),
 				containerClient: &mockContainerClient{},
 				cfg: &config.Config{
 					Library: "example-id",
@@ -111,18 +111,23 @@ func TestInitRun(t *testing.T) {
 								"dir1",
 								"dir2",
 							},
+							RemoveRegex: []string{
+								"dir1",
+								"dir2",
+							},
 						},
 					},
 				},
 				repo: &MockRepository{
-					Dir: filepath.Join(t.TempDir(), "repo"),
+					Dir: t.TempDir(),
 				},
 				librarianConfig: &config.LibrarianConfig{},
+				partialRepo:     t.TempDir(),
 			},
 			files: map[string]string{
 				"file1.txt":      "",
-				"dir1/file2.txt": "",
-				"dir2/file3.txt": "",
+				"dir1/file1.txt": "",
+				"dir2/file2.txt": "",
 			},
 		},
 		{
@@ -163,7 +168,7 @@ func TestInitRun(t *testing.T) {
 		{
 			name: "run release init command without librarian config",
 			runner: &initRunner{
-				workRoot:        filepath.Join(t.TempDir(), "work-root"),
+				workRoot:        t.TempDir(),
 				containerClient: &mockContainerClient{},
 				cfg: &config.Config{
 					Library: "example-id",
@@ -183,23 +188,28 @@ func TestInitRun(t *testing.T) {
 								"dir1",
 								"dir2",
 							},
+							RemoveRegex: []string{
+								"dir1",
+								"dir2",
+							},
 						},
 					},
 				},
 				repo: &MockRepository{
-					Dir: filepath.Join(t.TempDir(), "repo"),
+					Dir: t.TempDir(),
 				},
+				partialRepo: t.TempDir(),
 			},
 			files: map[string]string{
 				"file1.txt":      "",
-				"dir1/file2.txt": "",
-				"dir2/file3.txt": "",
+				"dir1/file1.txt": "",
+				"dir2/file2.txt": "",
 			},
 		},
 		{
 			name: "run release init command for all libraries",
 			runner: &initRunner{
-				workRoot:        filepath.Join(t.TempDir(), "work-root"),
+				workRoot:        t.TempDir(),
 				containerClient: &mockContainerClient{},
 				cfg:             &config.Config{},
 				state: &config.LibrarianState{
@@ -210,6 +220,10 @@ func TestInitRun(t *testing.T) {
 								"dir3",
 								"dir4",
 							},
+							RemoveRegex: []string{
+								"dir3",
+								"dir4",
+							},
 						},
 						{
 							ID: "example-id",
@@ -217,18 +231,23 @@ func TestInitRun(t *testing.T) {
 								"dir1",
 								"dir2",
 							},
+							RemoveRegex: []string{
+								"dir1",
+								"dir2",
+							},
 						},
 					},
 				},
 				repo: &MockRepository{
-					Dir: filepath.Join(t.TempDir(), "repo"),
+					Dir: t.TempDir(),
 				},
 				librarianConfig: &config.LibrarianConfig{},
+				partialRepo:     t.TempDir(),
 			},
 			files: map[string]string{
 				"file1.txt":      "",
-				"dir1/file2.txt": "",
-				"dir2/file3.txt": "",
+				"dir1/file1.txt": "",
+				"dir2/file2.txt": "",
 				"dir3/file3.txt": "",
 				"dir4/file4.txt": "",
 			},
@@ -236,7 +255,7 @@ func TestInitRun(t *testing.T) {
 		{
 			name: "docker command returns error",
 			runner: &initRunner{
-				workRoot: os.TempDir(),
+				workRoot: t.TempDir(),
 				containerClient: &mockContainerClient{
 					initErr: errors.New("simulated init error"),
 				},
@@ -245,6 +264,8 @@ func TestInitRun(t *testing.T) {
 				repo: &MockRepository{
 					Dir: t.TempDir(),
 				},
+				partialRepo:     t.TempDir(),
+				librarianConfig: &config.LibrarianConfig{},
 			},
 			wantErr:    true,
 			wantErrMsg: "simulated init error",
@@ -261,9 +282,33 @@ func TestInitRun(t *testing.T) {
 			wantErrMsg: "failed to create output dir",
 		},
 		{
-			name: "failed to get changes from repo",
+			name: "failed to get changes from repo when releasing one library",
 			runner: &initRunner{
-				workRoot:        os.TempDir(),
+				workRoot:        t.TempDir(),
+				containerClient: &mockContainerClient{},
+				cfg: &config.Config{
+					Library: "example-id",
+				},
+				state: &config.LibrarianState{
+					Libraries: []*config.LibraryState{
+						{
+							ID: "example-id",
+						},
+					},
+				},
+				repo: &MockRepository{
+					Dir:                             t.TempDir(),
+					GetCommitsForPathsSinceTagError: errors.New("simulated error when getting commits"),
+				},
+				partialRepo: t.TempDir(),
+			},
+			wantErr:    true,
+			wantErrMsg: "failed to fetch conventional commits for library",
+		},
+		{
+			name: "failed to get changes from repo when releasing multiple libraries",
+			runner: &initRunner{
+				workRoot:        t.TempDir(),
 				containerClient: &mockContainerClient{},
 				cfg:             &config.Config{},
 				state: &config.LibrarianState{
@@ -277,22 +322,44 @@ func TestInitRun(t *testing.T) {
 					Dir:                             t.TempDir(),
 					GetCommitsForPathsSinceTagError: errors.New("simulated error when getting commits"),
 				},
+				partialRepo: t.TempDir(),
 			},
 			wantErr:    true,
 			wantErrMsg: "failed to fetch conventional commits for library",
+		},
+		{
+			name: "failed to make partial repo",
+			runner: &initRunner{
+				workRoot: t.TempDir(),
+				repo: &MockRepository{
+					Dir: t.TempDir(),
+				},
+				partialRepo: "/invalid/path",
+			},
+			wantErr:    true,
+			wantErrMsg: "failed to make directory",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			// Setup library files before running the command.
 			repoDir := test.runner.repo.GetDir()
+			outputDir := filepath.Join(test.runner.workRoot, "output")
 			for path, content := range test.files {
-				fullPath := filepath.Join(repoDir, path)
-				if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
-					t.Fatalf("os.MkdirAll() = %v", err)
+				// Create files in repoDir and outputDir because the run() function
+				// will copy files from outputDir to repoDir.
+				for _, dir := range []string{repoDir, outputDir} {
+					fullPath := filepath.Join(dir, path)
+					if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+						t.Fatalf("os.MkdirAll() = %v", err)
+					}
+					if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+						t.Fatalf("os.WriteFile() = %v", err)
+					}
 				}
-				if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
-					t.Fatalf("os.WriteFile() = %v", err)
-				}
+			}
+			librarianDir := filepath.Join(repoDir, ".librarian")
+			if err := os.MkdirAll(librarianDir, 0755); err != nil {
+				t.Fatalf("os.MkdirAll() = %v", err)
 			}
 
 			outputDir := filepath.Join(test.runner.workRoot, "output")
@@ -324,7 +391,7 @@ func TestInitRun(t *testing.T) {
 				return
 			}
 			if err != nil {
-				t.Errorf("run() got nil runner, want non-nil")
+				t.Errorf("run() failed: %s", err.Error())
 			}
 
 			if test.wantFiles != nil {
@@ -699,8 +766,8 @@ func TestCleanAndCopyGlobalAllowlist(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			output := filepath.Join(t.TempDir(), "output")
-			repo := filepath.Join(t.TempDir(), "repo")
+			output := t.TempDir()
+			repo := t.TempDir()
 			for _, oneFile := range test.files {
 				// Create files in repo directory.
 				file := filepath.Join(repo, oneFile)
