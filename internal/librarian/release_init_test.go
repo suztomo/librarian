@@ -362,7 +362,6 @@ func TestInitRun(t *testing.T) {
 				t.Fatalf("os.MkdirAll() = %v", err)
 			}
 
-			outputDir := filepath.Join(test.runner.workRoot, "output")
 			if test.outputFiles != nil {
 				if err := os.MkdirAll(outputDir, 0755); err != nil {
 					t.Fatalf("os.MkdirAll() for output = %v", err)

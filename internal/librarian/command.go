@@ -219,16 +219,7 @@ func copyLibrary(dst, src string, library *config.LibraryState) error {
 		}
 	}
 
-	return nil
-}
-
-// copyLibrary copies the new files from outputDir to repoDir, without cleaning the existing files.
-func copyLibrary(repoDir, libraryID, outputDir string) error {
-	slog.Info("Copying generated results for library", "id", libraryID)
-	if err := os.CopyFS(repoDir, os.DirFS(outputDir)); err != nil {
-		return err
-	}
-	slog.Info("Library updated", "id", libraryID)
+	slog.Info("Library updated", "id", library.ID)
 	return nil
 }
 
