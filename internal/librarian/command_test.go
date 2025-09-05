@@ -1476,6 +1476,8 @@ func TestCopyLibraryFiles(t *testing.T) {
 		libraryID     string
 		state         *config.LibrarianState
 		filesToCreate []string
+		setup         func(t *testing.T, outputDir string)
+		verify        func(t *testing.T, repoDir string)
 		wantFiles     []string
 		skipFiles     []string
 		wantErr       bool
@@ -1532,6 +1534,51 @@ func TestCopyLibraryFiles(t *testing.T) {
 			},
 		},
 		{
+			name:      "copy library files with symbolic link",
+			repoDir:   filepath.Join(t.TempDir(), "dst"),
+			outputDir: filepath.Join(t.TempDir(), "src"),
+			libraryID: "example-library",
+			state: &config.LibrarianState{
+				Libraries: []*config.LibraryState{
+					{
+						ID: "example-library",
+						SourceRoots: []string{
+							"a/path",
+						},
+					},
+				},
+			},
+			filesToCreate: []string{
+				"a/path/target.txt",
+			},
+			setup: func(t *testing.T, outputDir string) {
+				if err := os.Symlink("target.txt", filepath.Join(outputDir, "a/path", "link.txt")); err != nil {
+					t.Fatalf("failed to create symlink: %v", err)
+				}
+			},
+			wantFiles: []string{
+				"a/path/target.txt",
+				"a/path/link.txt",
+			},
+			verify: func(t *testing.T, repoDir string) {
+				linkPath := filepath.Join(repoDir, "a/path", "link.txt")
+				info, err := os.Lstat(linkPath)
+				if err != nil {
+					t.Fatalf("failed to lstat symlink: %v", err)
+				}
+				if info.Mode()&os.ModeSymlink == 0 {
+					t.Errorf("copied file is not a symlink")
+				}
+				target, err := os.Readlink(linkPath)
+				if err != nil {
+					t.Fatalf("failed to readlink: %v", err)
+				}
+				if target != "target.txt" {
+					t.Errorf("symlink target is incorrect: got %q, want %q", target, "target.txt")
+				}
+			},
+		},
+		{
 			name:      "library not found",
 			repoDir:   filepath.Join(t.TempDir(), "dst"),
 			outputDir: filepath.Join(t.TempDir(), "src"),
@@ -1578,6 +1625,9 @@ func TestCopyLibraryFiles(t *testing.T) {
 			if len(test.filesToCreate) > 0 {
 				setup(test.outputDir, test.filesToCreate)
 			}
+			if test.setup != nil {
+				test.setup(t, test.outputDir)
+			}
 			err := copyLibraryFiles(test.state, test.repoDir, test.libraryID, test.outputDir)
 			if test.wantErr {
 				if err == nil {
@@ -1607,6 +1657,9 @@ func TestCopyLibraryFiles(t *testing.T) {
 				if _, err := os.Stat(fullPath); !os.IsNotExist(err) {
 					t.Errorf("file %s should not be copied to %s", file, test.repoDir)
 				}
+			}
+			if test.verify != nil {
+				test.verify(t, test.repoDir)
 			}
 		})
 	}
