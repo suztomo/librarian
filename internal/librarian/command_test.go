@@ -1679,7 +1679,7 @@ func TestCopyFile(t *testing.T) {
 			name:       "invalid src",
 			src:        "/invalid-path/example.txt",
 			wantErr:    true,
-			wantErrMsg: "failed to open file",
+			wantErrMsg: "failed to lstat file",
 		},
 		{
 			name:        "invalid dst path",

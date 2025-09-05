@@ -670,7 +670,7 @@ func TestCopyGlobalAllowlist(t *testing.T) {
 				"ignored/path/example.txt",
 			},
 			wantErr:    true,
-			wantErrMsg: "failed to open file",
+			wantErrMsg: "failed to lstat file",
 		},
 		{
 			name: "output doesn't have the global file",

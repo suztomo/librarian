@@ -415,15 +415,34 @@ func createPRBody(info *commitInfo) (string, error) {
 }
 
 func copyFile(dst, src string) (err error) {
+	lstat, err := os.Lstat(src)
+	if err != nil {
+		return fmt.Errorf("failed to lstat file: %q: %w", src, err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return fmt.Errorf("failed to make directory for %q: %w", dst, err)
+	}
+
+	if lstat.Mode()&os.ModeSymlink == os.ModeSymlink {
+		linkTarget, err := os.Readlink(src)
+		if err != nil {
+			return fmt.Errorf("failed to read link: %q: %w", src, err)
+		}
+		// Remove existing file at dst if it exists. os.Symlink will fail otherwise.
+		if _, err := os.Lstat(dst); err == nil {
+			if err := os.Remove(dst); err != nil {
+				return fmt.Errorf("failed to remove existing file at destination: %q: %w", dst, err)
+			}
+		}
+		return os.Symlink(linkTarget, dst)
+	}
+
 	sourceFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %q: %w", src, err)
 	}
 	defer sourceFile.Close()
-
-	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-		return fmt.Errorf("failed to make directory: %s", src)
-	}
 
 	destinationFile, err := os.Create(dst)
 	if err != nil {
