@@ -530,120 +530,6 @@ func TestCleanAndCopyLibrary(t *testing.T) {
 	}
 }
 
-func TestCopyOneLibrary(t *testing.T) {
-	t.Parallel()
-	// Create files in src directory.
-	setup := func(src string, files []string) {
-		for _, relPath := range files {
-			fullPath := filepath.Join(src, relPath)
-			if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
-				t.Error(err)
-			}
-
-			if _, err := os.Create(fullPath); err != nil {
-				t.Error(err)
-			}
-		}
-	}
-	for _, test := range []struct {
-		name          string
-		dst           string
-		src           string
-		library       *config.LibraryState
-		filesToCreate []string
-		wantFiles     []string
-		skipFiles     []string
-		wantErr       bool
-		wantErrMsg    string
-	}{
-		{
-			name: "copied a library",
-			dst:  filepath.Join(t.TempDir(), "dst"),
-			src:  filepath.Join(t.TempDir(), "src"),
-			library: &config.LibraryState{
-				ID: "example-library",
-				SourceRoots: []string{
-					"a/path",
-					"another/path",
-				},
-			},
-			filesToCreate: []string{
-				"a/path/example.txt",
-				"another/path/example.txt",
-				"skipped/path/example.txt",
-			},
-			wantFiles: []string{
-				"a/path/example.txt",
-				"another/path/example.txt",
-			},
-			skipFiles: []string{
-				"skipped/path/example.txt",
-			},
-		},
-		{
-			name: "invalid src",
-			dst:  os.TempDir(),
-			src:  "/invalid-path",
-			library: &config.LibraryState{
-				ID: "example-library",
-				SourceRoots: []string{
-					"a-library/path",
-				},
-			},
-			wantErr:    true,
-			wantErrMsg: "failed to copy",
-		},
-		{
-			name: "invalid dst",
-			dst:  "/invalid-path",
-			src:  os.TempDir(),
-			library: &config.LibraryState{
-				ID: "example-library",
-				SourceRoots: []string{
-					"a-library/path",
-				},
-			},
-			wantErr:    true,
-			wantErrMsg: "failed to copy",
-		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			if !test.wantErr {
-				setup(test.src, test.filesToCreate)
-			}
-			err := copyLibrary(test.dst, test.src, test.library)
-			if test.wantErr {
-				if err == nil {
-					t.Errorf("copyOneLibrary() shoud fail")
-				}
-
-				if !strings.Contains(err.Error(), test.wantErrMsg) {
-					t.Errorf("want error message: %s, got: %s", test.wantErrMsg, err.Error())
-				}
-
-				return
-			}
-			if err != nil {
-				t.Errorf("failed to run copyOneLibrary(): %s", err.Error())
-			}
-
-			for _, file := range test.wantFiles {
-				fullPath := filepath.Join(test.dst, file)
-				if _, err := os.Stat(fullPath); err != nil {
-					t.Errorf("file %s is not copied to %s", file, test.dst)
-				}
-			}
-
-			for _, file := range test.skipFiles {
-				fullPath := filepath.Join(test.dst, file)
-				if _, err := os.Stat(fullPath); !os.IsNotExist(err) {
-					t.Errorf("file %s should not be copied to %s", file, test.dst)
-				}
-			}
-		})
-	}
-}
-
 func TestClean(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
@@ -1596,6 +1482,27 @@ func TestCopyLibraryFiles(t *testing.T) {
 		wantErrMsg    string
 	}{
 		{
+			repoDir:   "/invalid-dst-path",
+			name:      "invalid dst",
+			outputDir: t.TempDir(),
+			libraryID: "example-library",
+			state: &config.LibrarianState{
+				Libraries: []*config.LibraryState{
+					{
+						ID: "example-library",
+						SourceRoots: []string{
+							"a-library/path",
+						},
+					},
+				},
+			},
+			filesToCreate: []string{
+				"a-library/path/example.txt",
+			},
+			wantErr:    true,
+			wantErrMsg: "failed to make directory",
+		},
+		{
 			name:      "copy library files",
 			repoDir:   filepath.Join(t.TempDir(), "dst"),
 			outputDir: filepath.Join(t.TempDir(), "src"),
@@ -1668,16 +1575,17 @@ func TestCopyLibraryFiles(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			if !test.wantErr {
+			if len(test.filesToCreate) > 0 {
 				setup(test.outputDir, test.filesToCreate)
 			}
 			err := copyLibraryFiles(test.state, test.repoDir, test.libraryID, test.outputDir)
 			if test.wantErr {
 				if err == nil {
 					t.Errorf("copyLibraryFiles() shoud fail")
+					return
 				}
-
-				if !strings.Contains(err.Error(), test.wantErrMsg) {
+				e := err.Error()
+				if !strings.Contains(e, test.wantErrMsg) {
 					t.Errorf("want error message: %s, got: %s", test.wantErrMsg, err.Error())
 				}
 

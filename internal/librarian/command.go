@@ -268,6 +268,9 @@ func cleanAndCopyLibrary(state *config.LibrarianState, repoDir, libraryID, outpu
 	return copyLibraryFiles(state, repoDir, libraryID, outputDir)
 }
 
+// copyLibraryFiles copies the files in SourceRoots of the library in the src folder to the dest folder. If there is an existing
+// files in the dest folder, it's overwritten.
+// If there's no files in the library's SourceRoots under the src directory, no copy will happen.
 func copyLibraryFiles(state *config.LibrarianState, dest, libraryID, src string) error {
 	library := findLibraryByID(state, libraryID)
 	if library == nil {
@@ -320,20 +323,6 @@ func getDirectoryFilenames(dir string) ([]string, error) {
 		return nil, err
 	}
 	return fileNames, nil
-}
-
-// copyLibrary copies library file from src to dst.
-func copyLibrary(dst, src string, library *config.LibraryState) error {
-	slog.Info("Copying library", "id", library.ID, "destination", dst, "source", src)
-	for _, srcRoot := range library.SourceRoots {
-		dstPath := filepath.Join(dst, srcRoot)
-		srcPath := filepath.Join(src, srcRoot)
-		if err := os.CopyFS(dstPath, os.DirFS(srcPath)); err != nil {
-			return fmt.Errorf("failed to copy %s to %s: %w", library.ID, dstPath, err)
-		}
-	}
-
-	return nil
 }
 
 // commitAndPush creates a commit and push request to GitHub for the generated changes.
