@@ -265,7 +265,7 @@ func cleanAndCopyLibrary(state *config.LibrarianState, repoDir, libraryID, outpu
 		return fmt.Errorf("failed to clean library, %s: %w", library.ID, err)
 	}
 
-	return copyLibrary(repoDir, outputDir, library)
+	return copyLibraryFiles(state, repoDir, libraryID, outputDir)
 }
 
 func copyLibraryFiles(state *config.LibrarianState, dest, libraryID, src string) error {

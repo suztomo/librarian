@@ -321,7 +321,7 @@ func TestCleanAndCopyLibrary(t *testing.T) {
 			errContains: "failed to clean library",
 		},
 		{
-			name:      "copy fails on symlink",
+			name:      "copy should not fail on symlink",
 			libraryID: "some-library",
 			state: &config.LibrarianState{
 				Libraries: []*config.LibraryState{
@@ -335,13 +335,11 @@ func TestCleanAndCopyLibrary(t *testing.T) {
 			},
 			repo: newTestGitRepo(t),
 			setup: func(t *testing.T, repoDir, outputDir string) {
-				// Create a symlink in the output directory to trigger an error.
+				// Create a symlink in the output directory
 				if err := os.Symlink("target", filepath.Join(outputDir, "symlink")); err != nil {
 					t.Fatalf("os.Symlink() = %v", err)
 				}
 			},
-			wantErr:     true,
-			errContains: "failed to copy",
 		},
 		{
 			name:      "empty RemoveRegex defaults to source root",
