@@ -268,9 +268,11 @@ func cleanAndCopyLibrary(state *config.LibrarianState, repoDir, libraryID, outpu
 	return copyLibraryFiles(state, repoDir, libraryID, outputDir)
 }
 
-// copyLibraryFiles copies the files in SourceRoots of the library in the src folder to the dest folder. If there is an existing
-// files in the dest folder, it's overwritten.
+// copyLibraryFiles copies the files in state.SourceRoots relative to the src folder to the dest
+// folder. It overwrites any existing files.
 // If there's no files in the library's SourceRoots under the src directory, no copy will happen.
+// If a file is being copied to the library's SourceRoots in the dest folder but the folder does
+// not exist, the copy fails.
 func copyLibraryFiles(state *config.LibrarianState, dest, libraryID, src string) error {
 	library := findLibraryByID(state, libraryID)
 	if library == nil {
