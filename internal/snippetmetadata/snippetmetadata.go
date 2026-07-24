@@ -80,13 +80,33 @@ func writeMetadata(path string, metadata map[string]any) error {
 	return nil
 }
 
+// Option configures behavior of UpdateAllLibraryVersions.
+type Option func(*options)
+
+type options struct {
+	// clientLibraryField specifies the top-level JSON field name for the client
+	// library metadata object in snippet metadata files.
+	// Most language generators (e.g., Go, Python, Node.js, Java) output
+	// camelCase "clientLibrary", whereas gapic-generator-ruby outputs
+	// snake_case "client_library".
+	clientLibraryField string
+}
+
+// ClientLibraryField returns an Option to configure the top-level field name
+// for the client library object in snippet metadata.
+func ClientLibraryField(fieldName string) Option {
+	return func(opts *options) {
+		opts.clientLibraryField = fieldName
+	}
+}
+
 // updateLibraryVersion updates the client library version for a single file.
-func updateLibraryVersion(path, version string) error {
+func updateLibraryVersion(path, version, fieldName string) error {
 	metadata, err := readMetadata(path)
 	if err != nil {
 		return err
 	}
-	clientLibrary, ok := metadata["clientLibrary"].(map[string]any)
+	clientLibrary, ok := metadata[fieldName].(map[string]any)
 	if !ok {
 		return fmt.Errorf("error updating snippet metadata file %s: %w", path, ErrNoClientLibraryField)
 	}
@@ -147,16 +167,22 @@ func ReformatAll(dir string) error {
 	return nil
 }
 
-// UpdateAllLibraryVersions updates the clientLibrary.version field of all
+// UpdateAllLibraryVersions updates the client library version field of all
 // snippet metadata files (filenames starting with "snippet_metadata" and
 // ending with ".json") under the given directory (including subdirectories).
-func UpdateAllLibraryVersions(dir, version string) error {
+func UpdateAllLibraryVersions(dir, version string, opts ...Option) error {
+	cfg := options{
+		clientLibraryField: "clientLibrary",
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	files, err := findAll(dir)
 	if err != nil {
 		return err
 	}
 	for _, file := range files {
-		if err := updateLibraryVersion(file, version); err != nil {
+		if err := updateLibraryVersion(file, version, cfg.clientLibraryField); err != nil {
 			return err
 		}
 	}

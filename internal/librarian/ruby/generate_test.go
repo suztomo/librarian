@@ -416,7 +416,11 @@ end
 	if err != nil {
 		t.Fatal(err)
 	}
-	var metadata SnippetMetadata
+	var metadata struct {
+		ClientLibrary struct {
+			Version string `json:"version"`
+		} `json:"client_library"`
+	}
 	if err := json.Unmarshal(gotSnippetMetadata, &metadata); err != nil {
 		t.Fatal(err)
 	}

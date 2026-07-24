@@ -28,7 +28,7 @@ import (
 func TestUpdateLibraryVersion(t *testing.T) {
 	// Copy the input file, as it's modified in place.
 	path := copyInputFileToTemp(t, "testdata/version-before.json")
-	if err := updateLibraryVersion(path, "1.20.0"); err != nil {
+	if err := updateLibraryVersion(path, "1.20.0", "clientLibrary"); err != nil {
 		t.Fatal(err)
 	}
 	got, err := os.ReadFile(path)
@@ -88,7 +88,7 @@ func TestUpdateLibraryVersion_Error(t *testing.T) {
 			dir := t.TempDir()
 			path := filepath.Join(dir, "snippet_metadata.json")
 			test.setup(t, path)
-			gotErr := updateLibraryVersion(path, "1.2.3")
+			gotErr := updateLibraryVersion(path, "1.2.3", "clientLibrary")
 			if gotErr == nil {
 				t.Fatal("expected error, got nil")
 			}
@@ -131,6 +131,38 @@ func TestUpdateAllLibraryVersions(t *testing.T) {
 		t.Fatal(err)
 	}
 	if diff := cmp.Diff(readmeContent, string(got)); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestUpdateAllLibraryVersions_ClientLibraryField(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "snippet_metadata.json")
+	input := `{
+  "client_library": {
+    "name": "google-cloud-asset-v1",
+    "version": "",
+    "language": "RUBY"
+  }
+}`
+	if err := os.WriteFile(path, []byte(input), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := UpdateAllLibraryVersions(dir, "1.20.0", ClientLibraryField("client_library")); err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{
+  "client_library": {
+    "language": "RUBY",
+    "name": "google-cloud-asset-v1",
+    "version": "1.20.0"
+  }
+}`
+	if diff := cmp.Diff(want, string(got)); diff != "" {
 		t.Errorf("mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -427,7 +459,7 @@ func TestHTMLCharsNoEscape(t *testing.T) {
   }
 }`,
 			run: func(path string) error {
-				return updateLibraryVersion(path, "1.2.0")
+				return updateLibraryVersion(path, "1.2.0", "clientLibrary")
 			},
 			want: `{
   "clientLibrary": {
