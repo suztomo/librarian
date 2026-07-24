@@ -978,31 +978,12 @@ func TestCopySamplesFromStaging(t *testing.T) {
 	outDir := t.TempDir()
 
 	for _, v := range []struct {
-		version       string
-		sampleContent string
-		metadata      snippetmetadata.SnippetMetadata
+		version         string
+		sampleContent   string
+		metadataContent string
 	}{
-		{
-			version:       "v1",
-			sampleContent: "console.log('v1');",
-			metadata: snippetmetadata.SnippetMetadata{
-				ClientLibrary: snippetmetadata.ClientLibrary{
-					Name:     "@google-cloud/test",
-					Version:  "1.0.0",
-					Language: "TYPESCRIPT",
-				},
-			},
-		},
-		{
-			version: "v1beta1",
-			metadata: snippetmetadata.SnippetMetadata{
-				ClientLibrary: snippetmetadata.ClientLibrary{
-					Name:     "@google-cloud/test",
-					Version:  "1.0.0",
-					Language: "TYPESCRIPT",
-				},
-			},
-		},
+		{version: "v1", sampleContent: "console.log('v1');", metadataContent: `{"snippets":[]}`},
+		{version: "v1beta1", metadataContent: `{"snippets":["beta"]}`},
 	} {
 		samplesDir := filepath.Join(stagingDir, v.version, "samples", "generated", v.version)
 		if err := os.MkdirAll(samplesDir, 0o755); err != nil {
@@ -1013,11 +994,7 @@ func TestCopySamplesFromStaging(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
-		metadataContent, err := json.Marshal(v.metadata)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(samplesDir, "snippet_metadata_google.cloud.test."+v.version+".json"), metadataContent, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(samplesDir, "snippet_metadata_google.cloud.test."+v.version+".json"), []byte(v.metadataContent), 0o644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -1027,10 +1004,9 @@ func TestCopySamplesFromStaging(t *testing.T) {
 	}
 
 	for _, test := range []struct {
-		name         string
-		path         string
-		want         string
-		wantMetadata *snippetmetadata.SnippetMetadata
+		name string
+		path string
+		want string
 	}{
 		{
 			name: "v1 sample file",
@@ -1040,24 +1016,12 @@ func TestCopySamplesFromStaging(t *testing.T) {
 		{
 			name: "v1 metadata",
 			path: filepath.Join(outDir, "samples", "generated", "v1", "snippet_metadata_google.cloud.test.v1.json"),
-			wantMetadata: &snippetmetadata.SnippetMetadata{
-				ClientLibrary: snippetmetadata.ClientLibrary{
-					Name:     "@google-cloud/test",
-					Version:  "1.0.0",
-					Language: "TYPESCRIPT",
-				},
-			},
+			want: `{"snippets":[]}`,
 		},
 		{
 			name: "v1beta1 metadata",
 			path: filepath.Join(outDir, "samples", "generated", "v1beta1", "snippet_metadata_google.cloud.test.v1beta1.json"),
-			wantMetadata: &snippetmetadata.SnippetMetadata{
-				ClientLibrary: snippetmetadata.ClientLibrary{
-					Name:     "@google-cloud/test",
-					Version:  "1.0.0",
-					Language: "TYPESCRIPT",
-				},
-			},
+			want: `{"snippets":["beta"]}`,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -1065,16 +1029,14 @@ func TestCopySamplesFromStaging(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if test.wantMetadata != nil {
-				var gotMetadata snippetmetadata.SnippetMetadata
-				if err := json.Unmarshal(got, &gotMetadata); err != nil {
-					t.Fatal(err)
-				}
-				if diff := cmp.Diff(*test.wantMetadata, gotMetadata); diff != "" {
-					t.Errorf("mismatch (-want +got):\n%s", diff)
-				}
-			} else if diff := cmp.Diff(test.want, string(got)); diff != "" {
+			if diff := cmp.Diff(test.want, string(got)); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+			if strings.HasSuffix(test.path, ".json") {
+				var metadata snippetmetadata.SnippetMetadata
+				if err := json.Unmarshal(got, &metadata); err != nil {
+					t.Errorf("error unmarshaling snippet metadata %s: %v", test.path, err)
+				}
 			}
 		})
 	}
