@@ -27,7 +27,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/googleapis/librarian/internal/config"
 	"github.com/googleapis/librarian/internal/serviceconfig"
-	"github.com/googleapis/librarian/internal/snippetmetadata"
 	"github.com/googleapis/librarian/internal/sources"
 )
 
@@ -313,7 +312,7 @@ if [ -n "$rubyCloudOut" ]; then
   mkdir -p "$rubyCloudOut/snippets"
   cat << 'EOF' > "$rubyCloudOut/snippets/snippet_metadata_google.cloud.secretmanager.v1.json"
 {
-  "clientLibrary": {
+  "client_library": {
     "name": "google-cloud-secret_manager-v1",
     "version": "",
     "language": "RUBY"
@@ -417,7 +416,7 @@ end
 	if err != nil {
 		t.Fatal(err)
 	}
-	var metadata snippetmetadata.SnippetMetadata
+	var metadata SnippetMetadata
 	if err := json.Unmarshal(gotSnippetMetadata, &metadata); err != nil {
 		t.Fatal(err)
 	}

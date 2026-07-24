@@ -27,7 +27,6 @@ import (
 	"github.com/googleapis/librarian/internal/config"
 	"github.com/googleapis/librarian/internal/filesystem"
 	"github.com/googleapis/librarian/internal/serviceconfig"
-	"github.com/googleapis/librarian/internal/snippetmetadata"
 	"github.com/googleapis/librarian/internal/sources"
 	"github.com/googleapis/librarian/internal/tool/protoc"
 )
@@ -81,7 +80,7 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 	if err := filesystem.MoveAndMergeWithKeep(tempDir, outDir, outDir, keepFunc); err != nil {
 		return fmt.Errorf("failed to move generated files: %w", err)
 	}
-	if err := snippetmetadata.UpdateAllLibraryVersions(outDir, library.Version); err != nil {
+	if err := updateAllSnippetMetadataVersions(outDir, library.Version); err != nil {
 		return fmt.Errorf("failed to update snippet metadata versions: %w", err)
 	}
 	return nil
