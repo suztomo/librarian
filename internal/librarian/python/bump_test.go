@@ -15,6 +15,7 @@
 package python
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -83,6 +84,17 @@ func TestBump(t *testing.T) {
 		if diff := cmp.Diff(want, string(got)); diff != "" {
 			t.Errorf("mismatch in file %s (-want +got):\n%s", file, diff)
 		}
+	}
+	gotSnippetMetadata, err := os.ReadFile(filepath.Join(dir, "samples/generated_samples/snippet_metadata.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var metadata snippetmetadata.SnippetMetadata
+	if err := json.Unmarshal(gotSnippetMetadata, &metadata); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff("1.2.3", metadata.ClientLibrary.Version); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
 	}
 }
 

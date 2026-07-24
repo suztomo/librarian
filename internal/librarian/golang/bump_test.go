@@ -15,6 +15,7 @@
 package golang
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/googleapis/librarian/internal/config"
+	"github.com/googleapis/librarian/internal/snippetmetadata"
 )
 
 func TestBump(t *testing.T) {
@@ -77,7 +79,7 @@ func TestBump(t *testing.T) {
 		{
 			name: "bump snippet metadata",
 			initialFiles: map[string]string{
-				"test-lib/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.1.0\"\n  }\n}\n",
+				"test-lib/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.1.0"),
 			},
 			library: &config.Library{
 				Name: "test-lib",
@@ -92,14 +94,14 @@ func TestBump(t *testing.T) {
 			},
 			version: "0.2.0",
 			wantFiles: map[string]string{
-				"test-lib/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.2.0\"\n  }\n}",
+				"test-lib/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.2.0"),
 			},
 		},
 		{
 			name: "ignore nested module snippets",
 			initialFiles: map[string]string{
-				"test-lib/examples/apiv1/snippet_metadata_foo.json":        "{\n  \"clientLibrary\": {\n    \"version\": \"0.1.0\"\n  }\n}",
-				"test-lib/nested/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.1.0\"\n  }\n}",
+				"test-lib/examples/apiv1/snippet_metadata_foo.json":        snippetMetadataFixture("0.1.0"),
+				"test-lib/nested/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.1.0"),
 			},
 			library: &config.Library{
 				Name: "test-lib",
@@ -114,14 +116,14 @@ func TestBump(t *testing.T) {
 			},
 			version: "0.2.0",
 			wantFiles: map[string]string{
-				"test-lib/examples/apiv1/snippet_metadata_foo.json":        "{\n  \"clientLibrary\": {\n    \"version\": \"0.2.0\"\n  }\n}",
-				"test-lib/nested/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.1.0\"\n  }\n}",
+				"test-lib/examples/apiv1/snippet_metadata_foo.json":        snippetMetadataFixture("0.2.0"),
+				"test-lib/nested/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.1.0"),
 			},
 		},
 		{
 			name: "module path version",
 			initialFiles: map[string]string{
-				"dataproc/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.1.0\"\n  }\n}",
+				"dataproc/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.1.0"),
 			},
 			library: &config.Library{
 				Name: "dataproc",
@@ -139,13 +141,13 @@ func TestBump(t *testing.T) {
 			},
 			version: "0.2.0",
 			wantFiles: map[string]string{
-				"dataproc/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.2.0\"\n  }\n}",
+				"dataproc/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.2.0"),
 			},
 		},
 		{
 			name: "library without Library.Go field for overrides",
 			initialFiles: map[string]string{
-				"secretmanager/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.1.0\"\n  }\n}",
+				"secretmanager/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.1.0"),
 				"secretmanager/internal/version.go":                      "package internal\n\nconst Version = \"0.1.0\"\n",
 			},
 			library: &config.Library{
@@ -158,7 +160,7 @@ func TestBump(t *testing.T) {
 			},
 			version: "0.2.0",
 			wantFiles: map[string]string{
-				"secretmanager/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.2.0\"\n  }\n}",
+				"secretmanager/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.2.0"),
 				"secretmanager/internal/version.go":                      "package internal\n\nconst Version = \"0.2.0\"\n",
 			},
 		},
@@ -256,7 +258,7 @@ func TestBump_Error(t *testing.T) {
 		{
 			name: "snippet metadata is read-only",
 			initialFiles: map[string]string{
-				"test-lib/examples/apiv1/snippet_metadata_foo.json": "{\n  \"clientLibrary\": {\n    \"version\": \"0.1.0\"\n  }\n}\n",
+				"test-lib/examples/apiv1/snippet_metadata_foo.json": snippetMetadataFixture("0.1.0"),
 			},
 			library: &config.Library{
 				Name: "test-lib",
@@ -321,4 +323,16 @@ func TestBump_Error(t *testing.T) {
 			}
 		})
 	}
+}
+
+func snippetMetadataFixture(version string) string {
+	content, err := json.MarshalIndent(snippetmetadata.SnippetMetadata{
+		ClientLibrary: snippetmetadata.ClientLibrary{
+			Version: version,
+		},
+	}, "", "  ")
+	if err != nil {
+		panic(err)
+	}
+	return string(content)
 }
