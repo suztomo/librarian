@@ -856,7 +856,7 @@ type RubyCloudOpts struct {
 	// GemNamespace is the root Ruby namespace.
 	GemNamespace string `yaml:"ruby-cloud-gem-namespace,omitempty"`
 
-	// MigrationVersion specifies the gem version milestone at which the library was migrated to GAPIC.
+	// MigrationVersion specifies the gem version milestone at which the library was migrated to GAPIC, generating a migration section in the README file.
 	MigrationVersion string `yaml:"ruby-cloud-migration-version,omitempty"`
 
 	// NamespaceOverride overrides token / segment replacements applied across all generated
