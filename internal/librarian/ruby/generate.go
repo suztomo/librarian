@@ -158,6 +158,9 @@ func buildGAPICOpts(api *config.API, gemName, googleapisDir string) ([]string, e
 	if sc != nil && sc.ServiceConfig != "" {
 		opts = append(opts, "service-yaml="+filepath.Join(googleapisDir, sc.ServiceConfig))
 	}
+	if sc != nil && sc.Description != "" {
+		opts = append(opts, "ruby-cloud-description="+escapeRubyCloudOptValue(sc.Description))
+	}
 	if gc != "" {
 		opts = append(opts, "grpc-service-config="+filepath.Join(googleapisDir, gc))
 	}
@@ -236,4 +239,16 @@ func toolsEnv() (map[string]string, error) {
 		env["GEM_PATH"] = installDir
 	}
 	return env, nil
+}
+
+// escapeRubyCloudOptValue escapes backslashes and commas in generator option values
+// (such as ruby-cloud-description) so that protoc and gapic-generator-ruby parameter parsers
+// do not incorrectly split option strings when options are joined with commas.
+func escapeRubyCloudOptValue(val string) string {
+	// This follows the same escaping convention as Bazel's _escape_config_value in rules_ruby_gapic
+	// (rules_ruby_gapic/private/ruby_gapic_library_internal.bzl#L120-L121 in gapic-generator-ruby
+	// at commit 8fed6b7c117c7cebaeb5aa5c45eb3f866164eb75) and gapic-generator-ruby's unescaping
+	// logic in RequestParamParser (gapic-generator/lib/gapic/schema/request_param_parser.rb#L30-L32).
+	val = strings.ReplaceAll(val, "\\", "\\\\")
+	return strings.ReplaceAll(val, ",", "\\,")
 }

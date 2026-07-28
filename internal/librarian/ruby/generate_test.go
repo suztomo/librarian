@@ -52,6 +52,7 @@ func TestBuildGAPICOpts(t *testing.T) {
 			want: []string{
 				"ruby-cloud-gem-name=google-cloud-secret_manager-v1",
 				"service-yaml=" + filepath.Join(googleapisDir, "google/cloud/secretmanager/v1/secretmanager_v1.yaml"),
+				"ruby-cloud-description=Stores sensitive data such as API keys\\, passwords\\, and certificates.\nProvides convenience while improving security.",
 				"grpc-service-config=" + filepath.Join(googleapisDir, "google/cloud/secretmanager/v1/secretmanager_grpc_service_config.json"),
 				"ruby-cloud-generate-transports=grpc;rest",
 				"ruby-cloud-rest-numeric-enums=true",
@@ -66,6 +67,7 @@ func TestBuildGAPICOpts(t *testing.T) {
 			want: []string{
 				"ruby-cloud-gem-name=google-cloud-compute-v1",
 				"service-yaml=" + filepath.Join(googleapisDir, "google/cloud/compute/v1/compute_v1.yaml"),
+				"ruby-cloud-description=Compute Engine is an infrastructure as a service (IaaS) product that offers self-managed virtual machine (VM) instances and bare metal instances.",
 				"ruby-cloud-generate-transports=rest",
 				"ruby-cloud-rest-numeric-enums=true",
 			},
@@ -84,6 +86,7 @@ func TestBuildGAPICOpts(t *testing.T) {
 			want: []string{
 				"ruby-cloud-gem-name=google-cloud-secret_manager",
 				"service-yaml=" + filepath.Join(googleapisDir, "google/cloud/secretmanager/v1/secretmanager_v1.yaml"),
+				"ruby-cloud-description=Stores sensitive data such as API keys\\, passwords\\, and certificates.\nProvides convenience while improving security.",
 				"grpc-service-config=" + filepath.Join(googleapisDir, "google/cloud/secretmanager/v1/secretmanager_grpc_service_config.json"),
 				"ruby-cloud-generate-transports=grpc;rest",
 				"ruby-cloud-rest-numeric-enums=true",
@@ -530,6 +533,37 @@ func TestDefaultOutput(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			got := DefaultOutput(test.libName, test.defaultOutput)
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestEscapeRubyCloudOptValue(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name:  "plain text",
+			input: "Cloud Asset API",
+			want:  "Cloud Asset API",
+		},
+		{
+			name:  "contains commas",
+			input: "API keys, passwords, and certificates.",
+			want:  `API keys\, passwords\, and certificates.`,
+		},
+		{
+			name:  "contains backslashes and commas",
+			input: `path\to\file, and more`,
+			want:  `path\\to\\file\, and more`,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := escapeRubyCloudOptValue(test.input)
 			if diff := cmp.Diff(test.want, got); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
