@@ -73,7 +73,7 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 	// TODO(https://github.com/googleapis/librarian/issues/6885): Implement main client gem wrapper generation
 	// for libraries configured with `ruby.wrapper_of`.
 	for _, api := range library.APIs {
-		if err := generateAPI(ctx, api, library.Name, pc, googleapisDir, tempDir); err != nil {
+		if err := generateAPI(ctx, api, library, cfg, pc, googleapisDir, tempDir); err != nil {
 			return fmt.Errorf("api %q: %w", api.Path, err)
 		}
 	}
@@ -90,7 +90,7 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 	return nil
 }
 
-func generateAPI(ctx context.Context, api *config.API, gemName string, pc *config.Protoc, googleapisDir, stagingDir string) error {
+func generateAPI(ctx context.Context, api *config.API, library *config.Library, cfg *config.Config, pc *config.Protoc, googleapisDir, stagingDir string) error {
 	additionalProtos := []string{commonResourcesProto}
 	if api.Ruby != nil {
 		additionalProtos = append(additionalProtos, api.Ruby.AdditionalProtos...)
@@ -99,7 +99,7 @@ func generateAPI(ctx context.Context, api *config.API, gemName string, pc *confi
 	if err != nil {
 		return err
 	}
-	gapicOpts, err := buildGAPICOpts(api, gemName, googleapisDir)
+	gapicOpts, err := buildGAPICOpts(api, library, cfg, googleapisDir)
 	if err != nil {
 		return err
 	}
@@ -146,7 +146,8 @@ func generateAPI(ctx context.Context, api *config.API, gemName string, pc *confi
 	return nil
 }
 
-func buildGAPICOpts(api *config.API, gemName, googleapisDir string) ([]string, error) {
+func buildGAPICOpts(api *config.API, library *config.Library, cfg *config.Config, googleapisDir string) ([]string, error) {
+	_ = cfg
 	sc, err := serviceconfig.Find(googleapisDir, api.Path, config.LanguageRuby)
 	if err != nil {
 		return nil, err
@@ -156,8 +157,8 @@ func buildGAPICOpts(api *config.API, gemName, googleapisDir string) ([]string, e
 		return nil, err
 	}
 	var opts []string
-	if gemName != "" {
-		opts = append(opts, "ruby-cloud-gem-name="+gemName)
+	if library != nil && library.Name != "" {
+		opts = append(opts, "ruby-cloud-gem-name="+library.Name)
 	}
 	if sc != nil && sc.ServiceConfig != "" {
 		opts = append(opts, "service-yaml="+filepath.Join(googleapisDir, sc.ServiceConfig))

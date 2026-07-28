@@ -42,7 +42,8 @@ func TestBuildGAPICOpts(t *testing.T) {
 	for _, test := range []struct {
 		name    string
 		api     *config.API
-		gemName string
+		library *config.Library
+		cfg     *config.Config
 		want    []string
 	}{
 		{
@@ -50,7 +51,9 @@ func TestBuildGAPICOpts(t *testing.T) {
 			api: &config.API{
 				Path: "google/cloud/secretmanager/v1",
 			},
-			gemName: "google-cloud-secret_manager-v1",
+			library: &config.Library{
+				Name: "google-cloud-secret_manager-v1",
+			},
 			want: []string{
 				"ruby-cloud-gem-name=google-cloud-secret_manager-v1",
 				"service-yaml=" + filepath.Join(googleapisDir, "google/cloud/secretmanager/v1/secretmanager_v1.yaml"),
@@ -64,7 +67,9 @@ func TestBuildGAPICOpts(t *testing.T) {
 			api: &config.API{
 				Path: "google/cloud/compute/v1",
 			},
-			gemName: "google-cloud-compute-v1",
+			library: &config.Library{
+				Name: "google-cloud-compute-v1",
+			},
 			want: []string{
 				"ruby-cloud-gem-name=google-cloud-compute-v1",
 				"service-yaml=" + filepath.Join(googleapisDir, "google/cloud/compute/v1/compute_v1.yaml"),
@@ -74,7 +79,7 @@ func TestBuildGAPICOpts(t *testing.T) {
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := buildGAPICOpts(test.api, test.gemName, googleapisDir)
+			got, err := buildGAPICOpts(test.api, test.library, test.cfg, googleapisDir)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -443,9 +448,9 @@ func TestGenerateAPI(t *testing.T) {
 	}
 	stagingDir := t.TempDir()
 	api := &config.API{Path: "google/cloud/secretmanager/v1"}
-	gemName := "google-cloud-secret_manager-v1"
+	library := &config.Library{Name: "google-cloud-secret_manager-v1"}
 
-	err = generateAPI(t.Context(), api, gemName, nil, googleapisDir, stagingDir)
+	err = generateAPI(t.Context(), api, library, nil, nil, googleapisDir, stagingDir)
 	if err != nil {
 		t.Fatalf("generateAPI() error = %v", err)
 	}
@@ -469,7 +474,8 @@ func TestGenerateAPI_Error(t *testing.T) {
 		t.Fatal(err)
 	}
 	api := &config.API{Path: "non/existent/path"}
-	err = generateAPI(t.Context(), api, "gem-name", nil, googleapisDir, t.TempDir())
+	library := &config.Library{Name: "gem-name"}
+	err = generateAPI(t.Context(), api, library, nil, nil, googleapisDir, t.TempDir())
 	if err == nil {
 		t.Error("generateAPI() error = nil, want error")
 	}
