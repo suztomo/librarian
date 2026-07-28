@@ -77,6 +77,9 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 			return fmt.Errorf("api %q: %w", api.Path, err)
 		}
 	}
+	if err := updateRepoMetadata(outDir, tempDir, library.Name); err != nil {
+		return fmt.Errorf("failed to update repo metadata: %w", err)
+	}
 	keepSet := buildKeepSet(library.Name, library.Keep)
 	keepFunc := func(rel string) bool {
 		return isKept(rel, keepSet)
