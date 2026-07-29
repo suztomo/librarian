@@ -69,10 +69,8 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 		pc = cfg.Tools.Protoc
 	}
 
-	// TODO(https://github.com/googleapis/librarian/issues/6885): Implement main client gem wrapper generation
-	// for libraries configured with `ruby.wrapper_of`.
 	for _, api := range library.APIs {
-		if err := generateAPI(ctx, api, library.Name, pc, googleapisDir, tempDir); err != nil {
+		if err := generateAPI(ctx, api, library, pc, googleapisDir, tempDir); err != nil {
 			return fmt.Errorf("api %q: %w", api.Path, err)
 		}
 	}
@@ -86,7 +84,7 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 	return nil
 }
 
-func generateAPI(ctx context.Context, api *config.API, gemName string, pc *config.Protoc, googleapisDir, stagingDir string) error {
+func generateAPI(ctx context.Context, api *config.API, library *config.Library, pc *config.Protoc, googleapisDir, stagingDir string) error {
 	additionalProtos := []string{commonResourcesProto}
 	if api.Ruby != nil {
 		additionalProtos = append(additionalProtos, api.Ruby.AdditionalProtos...)
@@ -95,7 +93,7 @@ func generateAPI(ctx context.Context, api *config.API, gemName string, pc *confi
 	if err != nil {
 		return err
 	}
-	gapicOpts, err := buildGAPICOpts(api, gemName, googleapisDir)
+	gapicOpts, err := buildGAPICOpts(api, library, googleapisDir)
 	if err != nil {
 		return err
 	}
@@ -110,14 +108,20 @@ func generateAPI(ctx context.Context, api *config.API, gemName string, pc *confi
 	if err := os.MkdirAll(libStagingDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create lib staging directory: %w", err)
 	}
-	grpcPluginPath := filepath.Join(installDir, "bin", "grpc_tools_ruby_protoc_plugin")
+	// A main client is a wrapper of a versioned client
+	isWrapper := library.Ruby != nil && len(library.Ruby.WrapperOf) > 0
 	args := []string{
 		"--experimental_allow_proto3_optional",
 		"-I=" + googleapisDir,
-		"--ruby_out=" + libStagingDir,
-		"--grpc_out=" + libStagingDir,
-		"--plugin=protoc-gen-grpc=" + grpcPluginPath,
 		"--ruby_cloud_out=" + stagingDir,
+	}
+	if !isWrapper {
+		grpcPluginPath := filepath.Join(installDir, "bin", "grpc_tools_ruby_protoc_plugin")
+		args = append(args,
+			"--ruby_out="+libStagingDir,
+			"--grpc_out="+libStagingDir,
+			"--plugin=protoc-gen-grpc="+grpcPluginPath,
+		)
 	}
 	if len(gapicOpts) > 0 {
 		args = append(args, "--ruby_cloud_opt="+strings.Join(gapicOpts, ","))
@@ -142,7 +146,7 @@ func generateAPI(ctx context.Context, api *config.API, gemName string, pc *confi
 	return nil
 }
 
-func buildGAPICOpts(api *config.API, gemName, googleapisDir string) ([]string, error) {
+func buildGAPICOpts(api *config.API, library *config.Library, googleapisDir string) ([]string, error) {
 	sc, err := serviceconfig.Find(googleapisDir, api.Path, config.LanguageRuby)
 	if err != nil {
 		return nil, err
@@ -151,9 +155,8 @@ func buildGAPICOpts(api *config.API, gemName, googleapisDir string) ([]string, e
 	if err != nil {
 		return nil, err
 	}
-	var opts []string
-	if gemName != "" {
-		opts = append(opts, "ruby-cloud-gem-name="+gemName)
+	opts := []string{
+		"ruby-cloud-gem-name=" + library.Name,
 	}
 	if sc != nil && sc.ServiceConfig != "" {
 		opts = append(opts, "service-yaml="+filepath.Join(googleapisDir, sc.ServiceConfig))
@@ -181,6 +184,10 @@ func buildGAPICOpts(api *config.API, gemName, googleapisDir string) ([]string, e
 		if api.Ruby.RubyCloudOpts.MigrationVersion != "" {
 			opts = append(opts, "ruby-cloud-migration-version="+api.Ruby.RubyCloudOpts.MigrationVersion)
 		}
+	}
+	if library.Ruby != nil && len(library.Ruby.WrapperOf) > 0 {
+		// This controls the dependency range declaration in the gemspec file.
+		opts = append(opts, "ruby-cloud-wrapper-of="+strings.Join(library.Ruby.WrapperOf, ";"))
 	}
 	return opts, nil
 }
