@@ -16,6 +16,7 @@ package rust
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -552,24 +553,28 @@ func TestModelAnnotationsHasBidiStreaming(t *testing.T) {
 	}
 
 	for _, test := range []struct {
-		name    string
-		service *api.Service
-		options map[string]string
-		want    bool
+		name             string
+		service          *api.Service
+		options          map[string]string
+		want             bool
+		wantGaxiFeatures []string
 	}{
 		{
 			name:    "bidi streaming enabled with bidi method",
 			service: bidiService,
 			options: map[string]string{
 				"include-bidi-streaming-methods": "true",
+				"package:gaxi":                   "package=google-cloud-gax,used-if=services",
 			},
-			want: true,
+			want:             true,
+			wantGaxiFeatures: []string{"_internal-grpc-client"},
 		},
 		{
 			name:    "bidi streaming disabled with bidi method",
 			service: bidiService,
 			options: map[string]string{
 				"include-bidi-streaming-methods": "false",
+				"package:gaxi":                   "package=google-cloud-gax,used-if=services",
 			},
 			want: false,
 		},
@@ -578,6 +583,7 @@ func TestModelAnnotationsHasBidiStreaming(t *testing.T) {
 			service: unaryService,
 			options: map[string]string{
 				"include-bidi-streaming-methods": "true",
+				"package:gaxi":                   "package=google-cloud-gax,used-if=services",
 			},
 			want: false,
 		},
@@ -587,6 +593,7 @@ func TestModelAnnotationsHasBidiStreaming(t *testing.T) {
 			options: map[string]string{
 				"include-bidi-streaming-methods": "true",
 				"template-override":              "templates/tonic",
+				"package:gaxi":                   "package=google-cloud-gax,used-if=services",
 			},
 			want: false,
 		},
@@ -603,6 +610,17 @@ func TestModelAnnotationsHasBidiStreaming(t *testing.T) {
 			}
 			if got.HasBidiStreaming != test.want {
 				t.Errorf("HasBidiStreaming = %v, want %v", got.HasBidiStreaming, test.want)
+			}
+			if len(test.wantGaxiFeatures) > 0 {
+				idx := slices.IndexFunc(codec.extraPackages, func(pkg *packagez) bool {
+					return pkg.name == gaxiPackageName
+				})
+				if idx == -1 {
+					t.Fatalf("gaxi package not found in extraPackages")
+				}
+				if diff := cmp.Diff(test.wantGaxiFeatures, codec.extraPackages[idx].features); diff != "" {
+					t.Errorf("mismatch (-want +got):\n%s", diff)
+				}
 			}
 		})
 	}
