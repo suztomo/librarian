@@ -121,7 +121,7 @@ func TestCreateBinWrapper(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	tools := []*config.ComposerTool{
-		{Name: "gapic-generator-php", Version: "1.0.0", Repo: "github.com/googleapis/gapic-generator-php"},
+		{Name: "gapic-generator-php", Version: "1.0.0", Repo: "github.com/googleapis/gapic-generator-php", SHA256: "somehash"},
 	}
 	if err := verify(tools); err != nil {
 		t.Errorf("verify() error = %v, want nil", err)
@@ -137,23 +137,44 @@ func TestVerify_Error(t *testing.T) {
 		{
 			name: "missing name",
 			tools: []*config.ComposerTool{
-				{Name: "", Version: "1.0.0", Repo: "github.com"},
+				{Name: "", Version: "1.0.0", Repo: "github.com", SHA256: "somehash"},
 			},
 			wantErr: ErrInvalidTool,
 		},
 		{
 			name: "missing version",
 			tools: []*config.ComposerTool{
-				{Name: "gapic-generator-php", Version: "", Repo: "github.com"},
+				{Name: "gapic-generator-php", Version: "", Repo: "github.com", SHA256: "somehash"},
 			},
 			wantErr: ErrInvalidTool,
 		},
 		{
 			name: "missing repo",
 			tools: []*config.ComposerTool{
-				{Name: "gapic-generator-php", Version: "1.0.0", Repo: ""},
+				{Name: "gapic-generator-php", Version: "1.0.0", Repo: "", SHA256: "somehash"},
 			},
 			wantErr: ErrMissingRepo,
+		},
+		{
+			name: "missing sha256",
+			tools: []*config.ComposerTool{
+				{Name: "gapic-generator-php", Version: "1.0.0", Repo: "github.com", SHA256: ""},
+			},
+			wantErr: ErrInvalidTool,
+		},
+		{
+			name: "both local path and remote provided",
+			tools: []*config.ComposerTool{
+				{Name: "gapic-generator-php", Version: "1.0.0", Repo: "github.com", SHA256: "somehash", LocalPath: "."},
+			},
+			wantErr: ErrInvalidTool,
+		},
+		{
+			name: "neither local path nor remote provided",
+			tools: []*config.ComposerTool{
+				{Name: "gapic-generator-php"},
+			},
+			wantErr: ErrInvalidTool,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -162,5 +183,55 @@ func TestVerify_Error(t *testing.T) {
 				t.Errorf("verify() error = %v, wantErr = %v", gotErr, test.wantErr)
 			}
 		})
+	}
+}
+
+func TestInstall_LocalPath(t *testing.T) {
+	testhelper.RequireCommand(t, "composer")
+	bin := t.TempDir()
+	// Create a dummy composer executable that just exits 0 to simulate success.
+	testhelper.WriteExecutable(t, filepath.Join(bin, "composer"), "#!/bin/sh\nexit 0\n")
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	localDir := t.TempDir()
+	tools := []*config.ComposerTool{
+		{
+			Name:      "gapic-generator-php",
+			LocalPath: localDir,
+		},
+	}
+	binDir := t.TempDir()
+	if err := Install(t.Context(), tools, "php", binDir); err != nil {
+		t.Fatalf("Install() with LocalPath error = %v", err)
+	}
+	wrapperPath := filepath.Join(binDir, "gapic-generator-php")
+	b, err := os.ReadFile(wrapperPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	destPath := filepath.Join(localDir, "src", "Main.php")
+	want := phpWrapperContent("php", destPath)
+	if diff := cmp.Diff(want, string(b)); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestInstall_LocalPath_Error(t *testing.T) {
+	testhelper.RequireCommand(t, "composer")
+	bin := t.TempDir()
+	// Create a dummy composer executable that exits 1 to simulate failure.
+	testhelper.WriteExecutable(t, filepath.Join(bin, "composer"), "#!/bin/sh\nexit 1\n")
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	localDir := t.TempDir()
+	tools := []*config.ComposerTool{
+		{
+			Name:      "gapic-generator-php",
+			LocalPath: localDir,
+		},
+	}
+	binDir := t.TempDir()
+	if err := Install(t.Context(), tools, "php", binDir); err == nil {
+		t.Fatal("Install() with LocalPath error = nil, want error")
 	}
 }

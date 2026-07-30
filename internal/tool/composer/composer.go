@@ -41,14 +41,23 @@ func Install(ctx context.Context, tools []*config.ComposerTool, phpPath, bin str
 		return err
 	}
 	for _, tool := range tools {
-		dir, err := fetch.Repo(ctx, tool.Repo, tool.Version, tool.SHA256)
+		var dir string
+		var err error
+		if tool.LocalPath != "" {
+			dir, err = localPath(tool.LocalPath)
+		} else {
+			dir, err = fetch.Repo(ctx, tool.Repo, tool.Version, tool.SHA256)
+			if err != nil {
+				err = fmt.Errorf("fetching %s: %w", tool.Name, err)
+			}
+		}
 		if err != nil {
-			return fmt.Errorf("fetching %s: %w", tool.Name, err)
+			return err
 		}
 		if err := command.RunInDir(ctx, dir, "composer", "install", "--no-interaction", "--prefer-dist"); err != nil {
 			return fmt.Errorf("failed to run composer install: %w", err)
 		}
-		wrapperName := filepath.Base(tool.Repo)
+		wrapperName := filepath.Base(tool.Name)
 		if wrapperName == "gapic-generator-php" {
 			// Currently, this assumes the tool is the gapic-generator-php. This specific
 			// wrapper logic will not work for generic Composer tools because:
@@ -68,6 +77,21 @@ func Install(ctx context.Context, tools []*config.ComposerTool, phpPath, bin str
 		}
 	}
 	return nil
+}
+
+// localPath resolves and validates the absolute path for a local composer tool.
+func localPath(path string) (string, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve absolute path for %s: %w", path, err)
+	}
+	if _, err := os.Stat(absPath); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("local composer path not found: %w", err)
+		}
+		return "", fmt.Errorf("failed to stat local composer path: %w", err)
+	}
+	return absPath, nil
 }
 
 // phpWrapperContent generates the bash script content for the PHP tool wrapper.
@@ -90,11 +114,27 @@ func createBinWrapper(wrapperName, content, binDir string) error {
 
 func verify(tools []*config.ComposerTool) error {
 	for _, tool := range tools {
-		if tool.Name == "" || tool.Version == "" {
-			return fmt.Errorf("%w: name and version must be specified: %+v", ErrInvalidTool, tool)
+		if tool.Name == "" {
+			return fmt.Errorf("%w: name must be specified: %+v", ErrInvalidTool, tool)
 		}
-		if tool.Repo == "" {
-			return fmt.Errorf("%w: composer tool %s", ErrMissingRepo, tool.Name)
+		hasLocal := tool.LocalPath != ""
+		hasRemote := tool.Version != "" || tool.Repo != "" || tool.SHA256 != ""
+		if hasLocal && hasRemote {
+			return fmt.Errorf("%w: cannot specify both local_path and version/repo/sha256: %+v", ErrInvalidTool, tool)
+		}
+		if !hasLocal && !hasRemote {
+			return fmt.Errorf("%w: must specify either local_path or version/repo/sha256: %+v", ErrInvalidTool, tool)
+		}
+		if hasRemote {
+			if tool.Version == "" {
+				return fmt.Errorf("%w: version must be specified: %+v", ErrInvalidTool, tool)
+			}
+			if tool.Repo == "" {
+				return fmt.Errorf("%w: composer tool %s", ErrMissingRepo, tool.Name)
+			}
+			if tool.SHA256 == "" {
+				return fmt.Errorf("%w: sha256 must be specified: %+v", ErrInvalidTool, tool)
+			}
 		}
 	}
 	return nil
