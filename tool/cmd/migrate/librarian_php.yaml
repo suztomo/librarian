@@ -27,6 +27,8 @@ default:
     common_resources: true
 tools:
   composer:
+    - name: google-cloud-php/dev
+      local_path: "dev"
     - name: google/gapic-generator-php
       entrypoint: src/Main.php
       version: v1.21.2
