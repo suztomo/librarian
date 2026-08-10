@@ -86,7 +86,7 @@ func localPath(path string) (string, error) {
 
 // phpWrapperContent generates the bash script content for the PHP tool wrapper.
 func phpWrapperContent(phpExecutable, entrypoint string) string {
-	return fmt.Sprintf("#!/bin/bash\nexec %q -d display_errors=stderr -d memory_limit=1024M %q --side_loaded_root_dir \"$GOOGLEAPIS_DIR\" \"$@\"\n", phpExecutable, entrypoint)
+	return fmt.Sprintf("#!/bin/bash\nexec %q -d display_errors=stderr -d memory_limit=1024M %q \"$@\"\n", phpExecutable, entrypoint)
 }
 
 // createBinWrapper creates a shell wrapper script in the bin directory that forwards executions to the tool.

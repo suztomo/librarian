@@ -32,7 +32,10 @@ func TestInstall(t *testing.T) {
 	cache := t.TempDir()
 	t.Setenv("LIBRARIAN_CACHE", cache)
 	repoDir := filepath.Join(cache, "github.com/googleapis/gapic-generator-php@1.0.0")
-	if err := os.MkdirAll(filepath.Join(repoDir, "dummy"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(repoDir, "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repoDir, "src", "Main.php"), nil, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(repoDir, "composer.json"), []byte("{}"), 0o644); err != nil {
