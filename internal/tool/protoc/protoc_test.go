@@ -23,9 +23,12 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/googleapis/librarian/internal/config"
+	"github.com/googleapis/librarian/internal/testhelper"
 )
 
 func TestInstallDir(t *testing.T) {
@@ -68,6 +71,154 @@ func TestInstallDir(t *testing.T) {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestBinaryPath(t *testing.T) {
+	binaryName := protocBinaryName()
+	for _, test := range []struct {
+		name         string
+		version      string
+		librarianBin string
+		cacheDir     string
+		want         string
+	}{
+		{
+			name:         "valid version with LIBRARIAN_BIN",
+			version:      "25.1",
+			librarianBin: "/custom/bin",
+			want:         filepath.FromSlash("/custom/bin/protoc/v25.1/bin/" + binaryName),
+		},
+		{
+			name:     "valid version with LIBRARIAN_CACHE fallback",
+			version:  "26.0-rc1",
+			cacheDir: "/custom/cache",
+			want:     filepath.FromSlash("/custom/cache/bin/protoc/v26.0-rc1/bin/" + binaryName),
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if test.librarianBin != "" {
+				t.Setenv("LIBRARIAN_BIN", test.librarianBin)
+			} else {
+				t.Setenv("LIBRARIAN_BIN", "")
+			}
+			if test.cacheDir != "" {
+				t.Setenv("LIBRARIAN_CACHE", test.cacheDir)
+			} else {
+				t.Setenv("LIBRARIAN_CACHE", "")
+			}
+			got, err := BinaryPath(test.version)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(test.want, got); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestBinaryPath_Error(t *testing.T) {
+	if _, err := BinaryPath(""); err == nil {
+		t.Fatal("BinaryPath(\"\") expected error, got nil")
+	}
+}
+
+func TestBinaryPathOrSystem(t *testing.T) {
+	binaryName := protocBinaryName()
+
+	for _, test := range []struct {
+		name         string
+		pc           *config.Protoc
+		librarianBin string
+		setupPATH    func(t *testing.T) string
+		want         func(t *testing.T, installedPath string) string
+	}{
+		{
+			name:         "configured protoc uses installed binary path",
+			pc:           &config.Protoc{Version: "33.2"},
+			librarianBin: "/custom/bin",
+			want: func(t *testing.T, _ string) string {
+				return filepath.FromSlash("/custom/bin/protoc/v33.2/bin/" + binaryName)
+			},
+		},
+		{
+			name: "nil config falls back to system PATH",
+			pc:   nil,
+			setupPATH: func(t *testing.T) string {
+				return createFakeSystemExecutable(t, binaryName)
+			},
+			want: func(t *testing.T, installedPath string) string {
+				return installedPath
+			},
+		},
+		{
+			name: "empty version falls back to system PATH",
+			pc:   &config.Protoc{},
+			setupPATH: func(t *testing.T) string {
+				return createFakeSystemExecutable(t, binaryName)
+			},
+			want: func(t *testing.T, installedPath string) string {
+				return installedPath
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if test.librarianBin != "" {
+				t.Setenv("LIBRARIAN_BIN", test.librarianBin)
+			}
+			var installedPath string
+			if test.setupPATH != nil {
+				installedPath = test.setupPATH(t)
+			}
+			got, err := BinaryPathOrSystem(test.pc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := test.want(t, installedPath)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestBinaryPathOrSystem_Error(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	if _, err := BinaryPathOrSystem(nil); err == nil {
+		t.Fatal("BinaryPathOrSystem(nil) with empty PATH expected error, got nil")
+	}
+}
+
+func TestRun(t *testing.T) {
+	if runtime.GOOS == osWindows {
+		t.Skip("skipping execution test on Windows")
+	}
+	binaryName := protocBinaryName()
+	binDir := t.TempDir()
+	t.Setenv("LIBRARIAN_BIN", binDir)
+	version := "33.2"
+	protocDir := filepath.Join(binDir, "protoc", "v"+version, "bin")
+	if err := os.MkdirAll(protocDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	testhelper.WriteExecutable(t, filepath.Join(protocDir, binaryName), "#!/bin/sh\nexit 0\n")
+
+	pc := &config.Protoc{Version: version}
+	if err := Run(t.Context(), nil, pc, "--version"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRunOrSystem(t *testing.T) {
+	if runtime.GOOS == osWindows {
+		t.Skip("skipping execution test on Windows")
+	}
+	binaryName := protocBinaryName()
+	createFakeSystemExecutable(t, binaryName)
+
+	if err := RunOrSystem(t.Context(), nil, nil, "--version"); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -133,6 +284,22 @@ func TestDownloadAndExtract(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "protoc.zip")); err == nil {
 		t.Errorf("zip file was not cleaned up")
 	}
+}
+
+func protocBinaryName() string {
+	if runtime.GOOS == osWindows {
+		return "protoc.exe"
+	}
+	return "protoc"
+}
+
+func createFakeSystemExecutable(t *testing.T, binaryName string) string {
+	t.Helper()
+	tempDir := t.TempDir()
+	fakePath := filepath.Join(tempDir, binaryName)
+	testhelper.WriteExecutable(t, fakePath, "#!/bin/sh\nexit 0\n")
+	t.Setenv("PATH", tempDir+string(filepath.ListSeparator)+os.Getenv("PATH"))
+	return fakePath
 }
 
 func createMockZip(t *testing.T) ([]byte, error) {
