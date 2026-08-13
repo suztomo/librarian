@@ -43,7 +43,7 @@ extension Clients {
         withDefaultEndpoint: "https://{{DefaultHost}}",
       )
     }
-    {{#Codec.RestMethods}}
+    {{#Codec.Methods}}
 
     public func {{> /templates/common/method_signature/request_options}} {
       let path = try { () throws -> Swift.String in
@@ -89,7 +89,7 @@ extension Clients {
       {{/Codec.QueryParams}}
       var req = try await self.inner.newRequest(path: path, query: query)
       req.setMethod(.{{Codec.HTTPMethod}})
-      req.addHeader(name: "X-Goog-Api-Client", value: Clients.clientHeader)
+      req.addHeader(name: GoogleCloudGax._HeaderNames.apiClient, value: Clients.clientHeader)
       {{#Codec.HasBody}}
       {{#Codec.IsBodyWildcard}}
       req.setBody(data: try JSONEncoder().encode(request), ofContentType: "application/json")
@@ -111,7 +111,7 @@ extension Clients {
       ).get()
       {{/ReturnsEmpty}}
     }
-    {{/Codec.RestMethods}}
+    {{/Codec.Methods}}
   }
 }
 {{#Codec.IsGated}}

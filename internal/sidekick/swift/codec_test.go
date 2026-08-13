@@ -125,6 +125,35 @@ func TestParseOptions(t *testing.T) {
 			},
 		},
 		{
+			name: "module with grpc transport",
+			library: &config.Library{
+				Name:          "google-cloud-storage",
+				CopyrightYear: "2038",
+				Swift: &config.SwiftPackage{
+					PackageNameOverride: "GoogleCloudStorage",
+					LibraryNameOverride: "GoogleCloudStorage",
+				},
+			},
+			module: &config.SwiftModule{
+				ModuleType: "grpc-client",
+				ModulePath: "StorageControlProtos",
+			},
+			want: &codec{
+				Module:             true,
+				ModuleType:         "grpc-client",
+				GenerationYear:     "2038",
+				TargetLibraryName:  "GoogleCloudStorage",
+				PackageName:        "GoogleCloudStorage",
+				PackageVersion:     "0.0.0",
+				MonorepoRoot:       ".",
+				Model:              model,
+				ModulePath:         "StorageControlProtos",
+				ApiPackages:        map[string]*Dependency{},
+				DependenciesByName: map[string]*Dependency{},
+				ResponseEncoding:   defaultResponseEncoding,
+			},
+		},
+		{
 			name: "discovery",
 			library: &config.Library{
 				CopyrightYear:       "2038",
@@ -152,6 +181,10 @@ func TestParseOptions(t *testing.T) {
 			}
 			if diff := cmp.Diff(test.want, got, cmpopts.IgnoreUnexported(api.API{})); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+			wantGrpc := test.module != nil && test.module.ModuleType == "grpc-client"
+			if got.isGrpc() != wantGrpc {
+				t.Errorf("isGrpc() = %v, want %v", got.isGrpc(), wantGrpc)
 			}
 		})
 	}

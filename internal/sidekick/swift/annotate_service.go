@@ -28,12 +28,14 @@ type serviceAnnotations struct {
 	StubPrefix       string
 	HostnameShort    string
 	DocLines         []string
-	RestMethods      []*api.Method
+	Methods          []*api.Method
 	LibraryName      string
 	QuickstartMethod *api.Method
 	Model            *modelAnnotations
 	DependsOn        map[string]*Dependency
 	IsGated          bool
+	ModulePath       string
+	IsGrpc           bool
 
 	// Any additional services required by this service.
 	//
@@ -80,7 +82,7 @@ func (ann *serviceAnnotations) SnippetImports() []string {
 
 // HasLROs returns true if one of the methods is an LRO.
 func (ann *serviceAnnotations) HasLROs() bool {
-	return slices.ContainsFunc(ann.RestMethods, func(m *api.Method) bool {
+	return slices.ContainsFunc(ann.Methods, func(m *api.Method) bool {
 		ma := m.Codec.(*methodAnnotations)
 		return ma != nil && (ma.LRO != nil || ma.DiscoveryLRO != nil)
 	})
@@ -92,20 +94,20 @@ func (c *codec) annotateService(service *api.Service, model *modelAnnotations) (
 		return nil, err
 	}
 	requiredServices := make(map[string]*api.Service)
-	var restMethods []*api.Method
+	var methods []*api.Method
 	for _, method := range service.Methods {
-		if isGeneratedMethod(method) {
+		if c.isGeneratedMethod(method) {
 			if err := c.annotateMethod(method, model); err != nil {
 				return nil, err
 			}
-			restMethods = append(restMethods, method)
+			methods = append(methods, method)
 			if method.IsLroPoller && method.SourceService != nil && method.SourceService.Package == service.Package {
 				requiredServices[method.SourceService.ID] = method.SourceService
 			}
 		}
 	}
 	var quickstartMethod *api.Method
-	if service.QuickstartMethod != nil && isGeneratedMethod(service.QuickstartMethod) {
+	if service.QuickstartMethod != nil && c.isGeneratedMethod(service.QuickstartMethod) {
 		quickstartMethod = service.QuickstartMethod
 	}
 
@@ -116,11 +118,13 @@ func (c *codec) annotateService(service *api.Service, model *modelAnnotations) (
 		StubPrefix:       pascalCaseNoMangling(service.Name),
 		HostnameShort:    strings.TrimSuffix(service.DefaultHost, ".googleapis.com"),
 		DocLines:         docLines,
-		RestMethods:      restMethods,
+		Methods:          methods,
 		LibraryName:      c.LibraryName,
 		QuickstartMethod: quickstartMethod,
 		Model:            model,
 		DependsOn:        map[string]*Dependency{},
+		ModulePath:       c.ModulePath,
+		IsGrpc:           c.isGrpc(),
 	}
 	if c.PerServiceTraits {
 		annotations.IsGated = true
@@ -149,7 +153,7 @@ func (c *codec) annotateService(service *api.Service, model *modelAnnotations) (
 	}
 	annotations.DependsOn[wktDep.Name] = wktDep
 
-	for _, method := range restMethods {
+	for _, method := range methods {
 		if method.InputType != nil {
 			if method.InputType.Package != c.Model.PackageName {
 				dep, err := c.addApiPackageDependency(method.InputType.Package)
@@ -312,7 +316,10 @@ func (c *codec) addSignatureDependencies(annotations *serviceAnnotations, signat
 	return nil
 }
 
-func isGeneratedMethod(method *api.Method) bool {
+func (c *codec) isGeneratedMethod(method *api.Method) bool {
+	if c.isGrpc() {
+		return true
+	}
 	return method.PathInfo != nil && len(method.PathInfo.Bindings) != 0
 }
 

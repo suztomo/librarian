@@ -98,6 +98,11 @@ func (ann *methodAnnotations) HasQueryParams() bool {
 	return len(ann.QueryParams) != 0
 }
 
+// HasPathVariables returns true if the method has path variables for routing headers.
+func (ann *methodAnnotations) HasPathVariables() bool {
+	return len(ann.PathVariables) != 0
+}
+
 // PlainRPC returns true if the method is not a pagination or LRO.
 func (ann *methodAnnotations) PlainRPC() bool {
 	return ann.LRO == nil && ann.Pagination == nil && ann.DiscoveryLRO == nil
@@ -124,17 +129,37 @@ func (c *codec) annotateMethod(method *api.Method, modelAnn *modelAnnotations) e
 	if err != nil {
 		return err
 	}
-	binding := method.PathInfo.Bindings[0]
-	hasBody := method.PathInfo.BodyFieldPath != ""
-	isBodyWildcard := method.PathInfo.BodyFieldPath == "*"
+	var pathExpressionStr string
+	var pathVariables []*pathVariable
+	var httpMethod string
+	var hasBody bool
+	var isBodyWildcard bool
 	var bodyField string
-	if hasBody && !isBodyWildcard {
-		bodyField = camelCase(method.PathInfo.BodyFieldPath)
+	var queryParams []*api.Field
+
+	// In Protobuf APIs (such as Storage Control or pure gRPC services), some RPC
+	// methods do not define google.api.http annotations.
+	// - HTTP/REST methods: Continue to extract httpMethod, pathExpressionStr,
+	//   bodyField, queryParams, and pathVariables as before.
+	// - Pure gRPC methods (without HTTP annotations): Safely bypass the HTTP
+	//   extraction without crashing, leaving those fields as their default zero values.
+	if method.PathInfo != nil && len(method.PathInfo.Bindings) > 0 {
+		binding := method.PathInfo.Bindings[0]
+		hasBody = method.PathInfo.BodyFieldPath != ""
+		isBodyWildcard = method.PathInfo.BodyFieldPath == "*"
+		if hasBody && !isBodyWildcard {
+			bodyField = camelCase(method.PathInfo.BodyFieldPath)
+		}
+		var err error
+		pathVariables, err = c.pathVariables(method.InputType, binding.PathTemplate)
+		if err != nil {
+			return err
+		}
+		pathExpressionStr = pathExpression(binding.PathTemplate)
+		httpMethod = binding.Verb
+		queryParams = language.QueryParams(method, binding)
 	}
-	pathVariables, err := c.pathVariables(method.InputType, binding.PathTemplate)
-	if err != nil {
-		return err
-	}
+
 	var pagination *paginationAnnotations
 	if method.Pagination != nil && method.OutputType != nil && method.OutputType.Pagination != nil {
 		itemField := method.OutputType.Pagination.PageableItem
@@ -193,13 +218,13 @@ func (c *codec) annotateMethod(method *api.Method, modelAnn *modelAnnotations) e
 	method.Codec = &methodAnnotations{
 		Name:             camelCase(method.Name),
 		DocLines:         docLines,
-		PathExpression:   pathExpression(binding.PathTemplate),
+		PathExpression:   pathExpressionStr,
 		PathVariables:    pathVariables,
-		HTTPMethod:       binding.Verb,
+		HTTPMethod:       httpMethod,
 		HasBody:          hasBody,
 		IsBodyWildcard:   isBodyWildcard,
 		BodyField:        bodyField,
-		QueryParams:      language.QueryParams(method, binding),
+		QueryParams:      queryParams,
 		Pagination:       pagination,
 		LRO:              lro,
 		ReturnType:       returnType,
