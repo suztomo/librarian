@@ -698,6 +698,7 @@ func TestGenerateAPI(t *testing.T) {
 		t.Context(),
 		&config.API{Path: "google/cloud/secretmanager/v1"},
 		&config.Library{Name: "secretmanager", Output: repoRoot},
+		nil,
 		googleapisDir,
 		repoRoot,
 	)
@@ -767,6 +768,16 @@ func TestGenerateAPI_Error(t *testing.T) {
 			},
 			wantErr: syscall.EISDIR,
 		},
+		{
+			name: "protoc not found in PATH",
+			setup: func(t *testing.T, repoRoot, outputDir string) {
+				t.Setenv("PATH", t.TempDir())
+			},
+			api: &config.API{Path: "google/cloud/secretmanager/v1"},
+			library: &config.Library{
+				Name: "pkg",
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			repoRoot := t.TempDir()
@@ -774,7 +785,7 @@ func TestGenerateAPI_Error(t *testing.T) {
 			if test.setup != nil {
 				test.setup(t, repoRoot, outputDir)
 			}
-			gotErr := generateAPI(t.Context(), test.api, test.library, googleapisDir, repoRoot)
+			gotErr := generateAPI(t.Context(), test.api, test.library, nil, googleapisDir, repoRoot)
 			// Not all errors are easy to specify. (Most come from other
 			// packages, and we're just testing they're propagated.)
 			if test.wantErr != nil && !errors.Is(gotErr, test.wantErr) {
@@ -785,6 +796,29 @@ func TestGenerateAPI_Error(t *testing.T) {
 				t.Fatal("expected error; got none")
 			}
 		})
+	}
+}
+
+func TestGenerateAPI_ConfiguredProtoc(t *testing.T) {
+	version := "33.5"
+	setupStubProtoc(t, version, 42)
+
+	repoRoot := t.TempDir()
+	pc := &config.Protoc{Version: version}
+	err := generateAPI(
+		t.Context(),
+		&config.API{Path: "google/cloud/secretmanager/v1"},
+		&config.Library{Name: "secretmanager", Output: repoRoot},
+		pc,
+		googleapisDir,
+		repoRoot,
+	)
+	var exitErr *exec.ExitError
+	if !errors.As(err, &exitErr) {
+		t.Fatalf("expected *exec.ExitError from stub protoc, got: %v", err)
+	}
+	if got, want := exitErr.ExitCode(), 42; got != want {
+		t.Fatalf("exit code = %d, want %d", got, want)
 	}
 }
 
@@ -1697,4 +1731,16 @@ def format(session):
 	if err := os.WriteFile(filepath.Join(outDir, "noxfile.py"), []byte(content), 0o644); err != nil {
 		t.Fatalf("unable to create noxfile.py: %v", err)
 	}
+}
+
+func setupStubProtoc(t *testing.T, version string, exitCode int) {
+	t.Helper()
+	binDir := t.TempDir()
+	t.Setenv("LIBRARIAN_BIN", binDir)
+	protocDir := filepath.Join(binDir, "protoc", "v"+version, "bin")
+	if err := os.MkdirAll(protocDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stubProtoc := filepath.Join(protocDir, "protoc")
+	testhelper.WriteExecutable(t, stubProtoc, fmt.Sprintf("#!/bin/sh\nexit %d\n", exitCode))
 }
