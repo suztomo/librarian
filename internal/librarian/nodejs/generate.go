@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -34,6 +33,7 @@ import (
 	"github.com/googleapis/librarian/internal/filesystem"
 	"github.com/googleapis/librarian/internal/serviceconfig"
 	"github.com/googleapis/librarian/internal/sources"
+	"github.com/googleapis/librarian/internal/tool/protoc"
 )
 
 const (
@@ -57,6 +57,10 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 	if err := os.MkdirAll(outdir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
+	var pc *config.Protoc
+	if cfg.Tools != nil {
+		pc = cfg.Tools.Protoc
+	}
 	repoRoot := filepath.Dir(filepath.Dir(outdir))
 	for i, api := range library.APIs {
 		// TODO(https://github.com/googleapis/google-cloud-node/issues/8149): Do not
@@ -71,6 +75,7 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 			library:       library,
 			googleapisDir: googleapisDir,
 			repoRoot:      repoRoot,
+			protoc:        pc,
 		}); err != nil {
 			return fmt.Errorf("failed to generate api %q: %w", api.Path, err)
 		}
@@ -119,6 +124,7 @@ type generateAPIParams struct {
 	library       *config.Library
 	googleapisDir string
 	repoRoot      string
+	protoc        *config.Protoc
 }
 
 func generateAPI(ctx context.Context, params generateAPIParams) error {
@@ -164,7 +170,15 @@ func generateAPI(ctx context.Context, params generateAPIParams) error {
 	// Add additional protos from configuration.
 	protos = append(protos, nodejsAPI.AdditionalProtos...)
 
-	args, err := buildGeneratorArgs(generatorPath, params.api, params.library, absGoogleapisDir, stagingDir, nodejsAPI)
+	args, err := buildGeneratorArgs(buildGeneratorArgsParams{
+		generatorPath: generatorPath,
+		protoc:        params.protoc,
+		api:           params.api,
+		library:       params.library,
+		googleapisDir: absGoogleapisDir,
+		stagingDir:    stagingDir,
+		nodejsAPI:     nodejsAPI,
+	})
 	if err != nil {
 		return err
 	}
@@ -239,23 +253,33 @@ func unique(ss []string) []string {
 	return res
 }
 
+type buildGeneratorArgsParams struct {
+	generatorPath string
+	protoc        *config.Protoc
+	api           *config.API
+	library       *config.Library
+	googleapisDir string
+	stagingDir    string
+	nodejsAPI     *config.NodejsAPI
+}
+
 // buildGeneratorArgs constructs the gapic-generator-typescript arguments,
 // excluding proto files.
-func buildGeneratorArgs(generatorPath string, api *config.API, library *config.Library, googleapisDir, stagingDir string, nodejsAPI *config.NodejsAPI) ([]string, error) {
-	protocPath, err := exec.LookPath("protoc")
+func buildGeneratorArgs(params buildGeneratorArgsParams) ([]string, error) {
+	protocPath, err := protoc.BinaryPathOrSystem(params.protoc)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find protoc: %w", err)
 	}
 
 	args := []string{
-		generatorPath,
+		params.generatorPath,
 		"--protoc=" + protocPath,
 		"--common-proto-path=.",
 		"-I", ".",
-		"--output-dir", stagingDir,
+		"--output-dir", params.stagingDir,
 	}
 
-	grpcConfigPath, err := serviceconfig.FindGRPCServiceConfig(googleapisDir, api.Path)
+	grpcConfigPath, err := serviceconfig.FindGRPCServiceConfig(params.googleapisDir, params.api.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +287,7 @@ func buildGeneratorArgs(generatorPath string, api *config.API, library *config.L
 		args = append(args, "--grpc-service-config", grpcConfigPath)
 	}
 
-	apiMetadata, err := serviceconfig.Find(googleapisDir, api.Path, config.LanguageNodejs)
+	apiMetadata, err := serviceconfig.Find(params.googleapisDir, params.api.Path, config.LanguageNodejs)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +295,7 @@ func buildGeneratorArgs(generatorPath string, api *config.API, library *config.L
 		args = append(args, "--service-yaml", apiMetadata.ServiceConfig)
 	}
 
-	args = append(args, "--package-name", derivePackageName(library))
+	args = append(args, "--package-name", derivePackageName(params.library))
 	args = append(args, "--metadata")
 
 	// Only pass --transport for non-default values (default is grpc+rest).
@@ -286,28 +310,28 @@ func buildGeneratorArgs(generatorPath string, api *config.API, library *config.L
 		args = append(args, "--rest-numeric-enums")
 	}
 
-	if nodejsAPI.DIREGAPIC {
+	if params.nodejsAPI.DIREGAPIC {
 		args = append(args, "--diregapic")
 	}
 
-	if library.Nodejs != nil {
-		if library.Nodejs.BundleConfig != "" {
-			args = append(args, "--bundle-config", library.Nodejs.BundleConfig)
+	if params.library.Nodejs != nil {
+		if params.library.Nodejs.BundleConfig != "" {
+			args = append(args, "--bundle-config", params.library.Nodejs.BundleConfig)
 		}
-		if library.Nodejs.ESM {
+		if params.library.Nodejs.ESM {
 			args = append(args, "--format=esm")
 		}
-		for _, param := range library.Nodejs.ExtraProtocParameters {
+		for _, param := range params.library.Nodejs.ExtraProtocParameters {
 			args = append(args, "--"+param)
 		}
-		if library.Nodejs.HandwrittenLayer {
+		if params.library.Nodejs.HandwrittenLayer {
 			args = append(args, "--handwritten-layer")
 		}
-		if library.Nodejs.MainService != "" {
-			args = append(args, "--main-service", library.Nodejs.MainService)
+		if params.library.Nodejs.MainService != "" {
+			args = append(args, "--main-service", params.library.Nodejs.MainService)
 		}
-		if nodejsAPI.Mixins != "" {
-			args = append(args, "--mixins", nodejsAPI.Mixins)
+		if params.nodejsAPI.Mixins != "" {
+			args = append(args, "--mixins", params.nodejsAPI.Mixins)
 		}
 	}
 	return args, nil
