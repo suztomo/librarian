@@ -15,6 +15,7 @@
 package librarian
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -106,7 +107,7 @@ func TestAddLibraryCommand(t *testing.T) {
 			if err := yaml.Write(config.LibrarianYAML, cfg); err != nil {
 				t.Fatal(err)
 			}
-			err = runAdd(t.Context(), cfg, test.apiPath)
+			err = runAdd(t.Context(), cfg, test.apiPath, "")
 			if test.wantError != nil {
 				if !errors.Is(err, test.wantError) {
 					t.Errorf("expected error %v, got %v", test.wantError, err)
@@ -239,7 +240,7 @@ func TestAddLibrary(t *testing.T) {
 			if err := yaml.Write(config.LibrarianYAML, cfg); err != nil {
 				t.Fatal(err)
 			}
-			gotName, cfg, err := addLibrary(cfg, test.apiPath)
+			gotName, cfg, err := addLibrary(cfg, test.apiPath, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -418,7 +419,7 @@ func TestAddLibrary_ExistingLibrary(t *testing.T) {
 			if err := yaml.Write(config.LibrarianYAML, test.cfg); err != nil {
 				t.Fatal(err)
 			}
-			gotName, gotCfg, err := addLibrary(test.cfg, test.apiPath)
+			gotName, gotCfg, err := addLibrary(test.cfg, test.apiPath, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -467,7 +468,7 @@ func TestAddLibrary_ExistingLibrary_Error(t *testing.T) {
 			if err := yaml.Write(config.LibrarianYAML, test.cfg); err != nil {
 				t.Fatal(err)
 			}
-			_, _, err := addLibrary(test.cfg, test.apiPath)
+			_, _, err := addLibrary(test.cfg, test.apiPath, "")
 			if !errors.Is(err, test.wantErr) {
 				t.Fatalf("expected error %v, got %v", test.wantErr, err)
 			}
@@ -503,7 +504,7 @@ func TestAddLibrary_Preview(t *testing.T) {
 				Language:  config.LanguageGo,
 				Libraries: test.initialLibraries,
 			}
-			gotName, gotCfg, err := addLibrary(cfg, test.apiPath)
+			gotName, gotCfg, err := addLibrary(cfg, test.apiPath, "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -557,7 +558,7 @@ func TestAddLibrary_Preview_Error(t *testing.T) {
 				Language:  config.LanguageGo,
 				Libraries: test.initialLibraries,
 			}
-			_, _, err := addLibrary(cfg, test.apiPath)
+			_, _, err := addLibrary(cfg, test.apiPath, "")
 			if !errors.Is(err, test.wantErr) {
 				t.Fatalf("expected error %v, got %v", test.wantErr, err)
 			}
@@ -594,6 +595,7 @@ func TestDeriveLibraryName(t *testing.T) {
 		{config.LanguagePhp, "google/cloud/secretmanager/v1", "secretmanager"},
 		{config.LanguagePhp, "google/cloud/security/privateca/v1", "security-privateca"},
 		{config.LanguagePhp, "google/pubsub/v1", "pubsub"},
+		{config.LanguageRuby, "google/cloud/secretmanager/v1", "google-cloud-secretmanager-v1"},
 	} {
 		t.Run(test.language+"/"+test.apiPath, func(t *testing.T) {
 			got := deriveLibraryName(test.language, test.apiPath)
@@ -624,7 +626,7 @@ func TestAddLibraryCommand_Java(t *testing.T) {
 		t.Fatal(err)
 	}
 	// developerconnect has Locations mixin in its service.yaml
-	err = runAdd(t.Context(), cfg, "google/cloud/developerconnect/v1")
+	err = runAdd(t.Context(), cfg, "google/cloud/developerconnect/v1", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -677,7 +679,7 @@ func TestAddLibraryCommand_Php(t *testing.T) {
 		t.Fatal(err)
 	}
 	// developerconnect has Locations mixin in its service.yaml
-	err = runAdd(t.Context(), cfg, "google/cloud/developerconnect/v1")
+	err = runAdd(t.Context(), cfg, "google/cloud/developerconnect/v1", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -761,7 +763,7 @@ func TestAddLibrary_Swift(t *testing.T) {
 			if err := yaml.Write(config.LibrarianYAML, cfg); err != nil {
 				t.Fatal(err)
 			}
-			err = runAdd(t.Context(), cfg, "google/cloud/secretmanager/v1")
+			err = runAdd(t.Context(), cfg, "google/cloud/secretmanager/v1", "")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -774,6 +776,264 @@ func TestAddLibrary_Swift(t *testing.T) {
 			less := func(a, b *config.Library) bool { return a.Name < b.Name }
 			if diff := cmp.Diff(test.wantFinalLibraries, gotCfg.Libraries, cmpopts.SortSlices(less), cmpopts.IgnoreFields(config.Library{}, "APIs")); diff != "" {
 				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestAddLibraryCommand_Ruby(t *testing.T) {
+	googleapisDir, err := filepath.Abs("../testdata/googleapis")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name               string
+		initialLibraries   []*config.Library
+		initialManifest    map[string]string
+		initialPackages    map[string]any
+		args               []string
+		wantFinalLibraries []*config.Library
+		wantManifest       map[string]string
+		wantPackages       map[string]any
+	}{
+		{
+			name: "explicit library name for versioned gem with release please",
+			args: []string{"google/cloud/secretmanager/v1", "--name", "google-cloud-secret_manager-v1"},
+			wantFinalLibraries: []*config.Library{
+				{
+					Name:          "google-cloud-secret_manager-v1",
+					CopyrightYear: strconv.Itoa(time.Now().Year()),
+					Version:       "0.0.1",
+					APIs: []*config.API{
+						{Path: "google/cloud/secretmanager/v1"},
+					},
+				},
+			},
+			wantManifest: map[string]string{
+				"google-cloud-secret_manager-v1":        "0.0.1",
+				"google-cloud-secret_manager-v1+FILLER": "0.0.0",
+			},
+			wantPackages: map[string]any{
+				"google-cloud-secret_manager-v1": map[string]any{
+					"component":    "google-cloud-secret_manager-v1",
+					"version_file": "lib/google/cloud/secret_manager/v1/version.rb",
+				},
+			},
+		},
+		{
+			name: "explicit library name for wrapper gem with release please",
+			initialLibraries: []*config.Library{
+				{
+					Name:          "google-cloud-secret_manager-v1",
+					CopyrightYear: strconv.Itoa(time.Now().Year()),
+					Version:       "0.0.1",
+					APIs: []*config.API{
+						{Path: "google/cloud/secretmanager/v1"},
+					},
+				},
+			},
+			initialManifest: map[string]string{
+				"google-cloud-secret_manager-v1":        "0.0.1",
+				"google-cloud-secret_manager-v1+FILLER": "0.0.0",
+			},
+			initialPackages: map[string]any{
+				"google-cloud-secret_manager-v1": map[string]any{
+					"component":    "google-cloud-secret_manager-v1",
+					"version_file": "lib/google/cloud/secret_manager/v1/version.rb",
+				},
+			},
+			args: []string{"google/cloud/secretmanager", "--name", "google-cloud-secret_manager"},
+			wantFinalLibraries: []*config.Library{
+				{
+					Name:          "google-cloud-secret_manager",
+					CopyrightYear: strconv.Itoa(time.Now().Year()),
+					Version:       "0.0.1",
+					APIs: []*config.API{
+						{Path: "google/cloud/secretmanager/v1"},
+					},
+					Ruby: &config.RubyPackage{
+						WrapperOf: []string{"v1:0.0"},
+					},
+				},
+				{
+					Name:          "google-cloud-secret_manager-v1",
+					CopyrightYear: strconv.Itoa(time.Now().Year()),
+					Version:       "0.0.1",
+					APIs: []*config.API{
+						{Path: "google/cloud/secretmanager/v1"},
+					},
+				},
+			},
+			wantManifest: map[string]string{
+				"google-cloud-secret_manager":           "0.0.1",
+				"google-cloud-secret_manager+FILLER":    "0.0.0",
+				"google-cloud-secret_manager-v1":        "0.0.1",
+				"google-cloud-secret_manager-v1+FILLER": "0.0.0",
+			},
+			wantPackages: map[string]any{
+				"google-cloud-secret_manager": map[string]any{
+					"component":    "google-cloud-secret_manager",
+					"version_file": "lib/google/cloud/secret_manager/version.rb",
+				},
+				"google-cloud-secret_manager-v1": map[string]any{
+					"component":    "google-cloud-secret_manager-v1",
+					"version_file": "lib/google/cloud/secret_manager/v1/version.rb",
+				},
+			},
+		},
+		{
+			name: "default library name without flag",
+			args: []string{"google/cloud/secretmanager/v1"},
+			wantFinalLibraries: []*config.Library{
+				{
+					Name:          "google-cloud-secretmanager-v1",
+					CopyrightYear: strconv.Itoa(time.Now().Year()),
+					Version:       "0.0.1",
+					APIs: []*config.API{
+						{Path: "google/cloud/secretmanager/v1"},
+					},
+				},
+			},
+			wantManifest: map[string]string{
+				"google-cloud-secretmanager-v1":        "0.0.1",
+				"google-cloud-secretmanager-v1+FILLER": "0.0.0",
+			},
+			wantPackages: map[string]any{
+				"google-cloud-secretmanager-v1": map[string]any{
+					"component":    "google-cloud-secretmanager-v1",
+					"version_file": "lib/google/cloud/secretmanager/v1/version.rb",
+				},
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			t.Chdir(tmpDir)
+			manifest := test.initialManifest
+			if manifest == nil {
+				manifest = map[string]string{}
+			}
+			manifestBytes, err := json.Marshal(manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(tmpDir, ".release-please-manifest.json"), manifestBytes, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			packages := test.initialPackages
+			if packages == nil {
+				packages = map[string]any{}
+			}
+			rpConfigBytes, err := json.Marshal(map[string]any{"packages": packages})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(tmpDir, "release-please-config.json"), rpConfigBytes, 0o644); err != nil {
+				t.Fatal(err)
+			}
+			cfg := sample.Config()
+			cfg.Language = config.LanguageRuby
+			cfg.Default.Output = "output"
+			cfg.Libraries = test.initialLibraries
+			cfg.Sources.Googleapis.Dir = googleapisDir
+			if err := yaml.Write(config.LibrarianYAML, cfg); err != nil {
+				t.Fatal(err)
+			}
+			args := append([]string{"librarian", "add"}, test.args...)
+			if err := Run(t.Context(), args...); err != nil {
+				t.Fatal(err)
+			}
+			gotCfg, err := yaml.Read[config.Config](config.LibrarianYAML)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sort.Slice(gotCfg.Libraries, func(i, j int) bool {
+				return gotCfg.Libraries[i].Name < gotCfg.Libraries[j].Name
+			})
+			if diff := cmp.Diff(test.wantFinalLibraries, gotCfg.Libraries); diff != "" {
+				t.Errorf("libraries mismatch (-want +got):\n%s", diff)
+			}
+			gotManifest, err := readJSONFile[map[string]string](filepath.Join(tmpDir, ".release-please-manifest.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(test.wantManifest, gotManifest); diff != "" {
+				t.Errorf("manifest mismatch (-want +got):\n%s", diff)
+			}
+			gotRPConfig, err := readJSONFile[map[string]any](filepath.Join(tmpDir, "release-please-config.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantRPConfig := map[string]any{"packages": test.wantPackages}
+			if diff := cmp.Diff(wantRPConfig, gotRPConfig); diff != "" {
+				t.Errorf("release please config mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestAddLibraryCommand_Ruby_Error(t *testing.T) {
+	googleapisDir, err := filepath.Abs("../testdata/googleapis")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name             string
+		language         string
+		initialLibraries []*config.Library
+		args             []string
+		wantErr          error
+	}{
+		{
+			name:     "name flag specified for non-ruby language",
+			language: config.LanguageGo,
+			args:     []string{"google/cloud/secretmanager/v1", "--name", "custom-name"},
+			wantErr:  errNameOnlyForRuby,
+		},
+		{
+			name:     "duplicate API path",
+			language: config.LanguageRuby,
+			initialLibraries: []*config.Library{
+				{
+					Name: "google-cloud-secret_manager-v1",
+					APIs: []*config.API{
+						{Path: "google/cloud/secretmanager/v1"},
+					},
+				},
+			},
+			args:    []string{"google/cloud/secretmanager/v1", "--name", "google-cloud-secret_manager-v1"},
+			wantErr: errAPIAlreadyExists,
+		},
+		{
+			name:     "duplicate library name with different API",
+			language: config.LanguageRuby,
+			initialLibraries: []*config.Library{
+				{
+					Name: "google-cloud-secret_manager-v1",
+					APIs: []*config.API{
+						{Path: "google/cloud/secretmanager/v2"},
+					},
+				},
+			},
+			args:    []string{"google/cloud/secretmanager/v1", "--name", "google-cloud-secret_manager-v1"},
+			wantErr: errLibraryAlreadyExists,
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			t.Chdir(tmpDir)
+			cfg := sample.Config()
+			cfg.Language = test.language
+			cfg.Default.Output = "output"
+			cfg.Libraries = test.initialLibraries
+			cfg.Sources.Googleapis.Dir = googleapisDir
+			if err := yaml.Write(config.LibrarianYAML, cfg); err != nil {
+				t.Fatal(err)
+			}
+			args := append([]string{"librarian", "add"}, test.args...)
+			err := Run(t.Context(), args...)
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("expected error %v, got %v", test.wantErr, err)
 			}
 		})
 	}
