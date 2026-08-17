@@ -22,6 +22,14 @@ import (
 	"github.com/googleapis/librarian/internal/serviceconfig"
 )
 
+const defaultVersion = "0.0.0"
+
+// Add initializes Node.js-specific configuration for a library.
+func Add(lib *config.Library) *config.Library {
+	lib.Version = defaultVersion
+	return lib
+}
+
 // DefaultLibraryName derives a library name from an API path by stripping
 // the version suffix and replacing "/" with "-".
 // For example: "google/cloud/secretmanager/v1" ->
