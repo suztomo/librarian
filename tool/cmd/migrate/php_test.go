@@ -127,16 +127,16 @@ deep-copy-regex:
 				{
 					Name:       "google/gapic-generator-php",
 					Entrypoint: "src/Main.php",
-					Version:    "v1.21.2",
+					Version:    "v1.25.0",
 					Repo:       "github.com/googleapis/gapic-generator-php",
-					SHA256:     "29635b02c6e505fe31cba2f88ae999f00d2710fe1d65cb7cad521a82e7c5a518",
+					SHA256:     "fff773dd9f87b3f6cdd8807a330d820e1572f20a739e53c1efce8215210a2f47",
 				},
 				{
 					Name:       "php-post-processor",
 					Entrypoint: "src/PostProcessor/Main.php",
-					Version:    "v1.21.2",
+					Version:    "v1.25.0",
 					Repo:       "github.com/googleapis/gapic-generator-php",
-					SHA256:     "29635b02c6e505fe31cba2f88ae999f00d2710fe1d65cb7cad521a82e7c5a518",
+					SHA256:     "fff773dd9f87b3f6cdd8807a330d820e1572f20a739e53c1efce8215210a2f47",
 				},
 			},
 			Pip: []*config.PipTool{
@@ -157,8 +157,8 @@ deep-copy-regex:
 				},
 			},
 			Protoc: &config.Protoc{
-				Version: "31.0",
-				SHA256:  "24e2ed32060b7c990d5eb00d642fde04869d7f77c6d443f609353f097799dd42",
+				Version: "33.2",
+				SHA256:  "b24b53f87c151bfd48b112fe4c3a6e6574e5198874f38036aff41df3456b8caf",
 			},
 		},
 	}
