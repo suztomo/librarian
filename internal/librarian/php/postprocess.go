@@ -47,16 +47,27 @@ func postProcessLibrary(ctx context.Context, library *config.Library, componentN
 		return err
 	}
 
-	if err := command.RunInDir(ctx, componentName, "python3", "owlbot.py"); err != nil {
-		return fmt.Errorf("failed to run owlbot.py: %w", err)
-	}
 	bin, err := binDir()
 	if err != nil {
 		return fmt.Errorf("failed to get bin dir: %w", err)
 	}
 	postProcessor := filepath.Join(bin, "php-post-processor")
-	if err := command.RunInDir(ctx, componentName, postProcessor, "--input", "."); err != nil {
-		return fmt.Errorf("failed to run php-post-processor: %w", err)
+	if err := runPostProcessors(ctx, library, stagingDir, postProcessor); err != nil {
+		return err
+	}
+	if err := command.RunInDir(ctx, componentName, "python3", "owlbot.py"); err != nil {
+		return fmt.Errorf("failed to run owlbot.py: %w", err)
+	}
+
+	return nil
+}
+
+func runPostProcessors(ctx context.Context, library *config.Library, stagingDir, postProcessor string) error {
+	for _, api := range library.APIs {
+		apiStagingDir := filepath.Join(stagingDir, api.PHP.StagingSubdir)
+		if err := command.RunInDir(ctx, apiStagingDir, postProcessor, "--input", "."); err != nil {
+			return fmt.Errorf("failed to run php-post-processor on %s: %w", api.Path, err)
+		}
 	}
 	return nil
 }
