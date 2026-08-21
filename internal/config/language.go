@@ -904,6 +904,9 @@ type RubyCloudOpts struct {
 	// names don't match desired Ruby conventions.
 	ServiceOverride string `yaml:"ruby-cloud-service-override,omitempty"`
 
+	// Title overrides the gem title.
+	Title string `yaml:"ruby-cloud-title,omitempty"`
+
 	// WrapperGemOverride overrides a versioned client gem to a custom non-standard main wrapper gem name.
 	WrapperGemOverride string `yaml:"ruby-cloud-wrapper-gem-override,omitempty"`
 

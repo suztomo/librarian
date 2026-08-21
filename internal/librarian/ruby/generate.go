@@ -204,6 +204,9 @@ func buildGAPICOpts(api *config.API, library *config.Library, googleapisDir stri
 		if api.Ruby.RubyCloudOpts.ServiceOverride != "" {
 			opts = append(opts, "ruby-cloud-service-override="+api.Ruby.RubyCloudOpts.ServiceOverride)
 		}
+		if api.Ruby.RubyCloudOpts.Title != "" {
+			opts = append(opts, "ruby-cloud-title="+api.Ruby.RubyCloudOpts.Title)
+		}
 		if api.Ruby.RubyCloudOpts.WrapperGemOverride != "" {
 			opts = append(opts, "ruby-cloud-wrapper-gem-override="+api.Ruby.RubyCloudOpts.WrapperGemOverride)
 		}

@@ -514,6 +514,7 @@ This document describes the schema for the librarian.yaml.
 | `ruby-cloud-namespace-override` | string | Overrides token / segment replacements applied across all generated module & class paths. |
 | `ruby-cloud-path-override` | string | Overrides file/directory paths under lib/ and proto_docs/. |
 | `ruby-cloud-service-override` | string | Overrides generated service class names when proto package service names don't match desired Ruby conventions. |
+| `ruby-cloud-title` | string | Overrides the gem title. |
 | `ruby-cloud-wrapper-gem-override` | string | Overrides a versioned client gem to a custom non-standard main wrapper gem name. |
 | `ruby-cloud-yard-strict` | string | Enables or disables strict YARD syntax checks during generation. |
 
