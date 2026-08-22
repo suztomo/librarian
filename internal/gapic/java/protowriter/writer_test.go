@@ -22,6 +22,8 @@ import (
 	"github.com/googleapis/librarian/internal/gapic/java/model"
 )
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestWriteResponse(t *testing.T) {
 	ctx := &model.GapicContext{
 		Services: []*model.Service{

@@ -62,6 +62,11 @@ func collectImports(c *ast.ClassDefinition) []string {
 	for _, imp := range c.ImplementsTypes {
 		gatherTypeImports(imp, c.PackageName, impSet)
 	}
+	for _, ann := range c.Annotations {
+		if ann != nil {
+			gatherTypeImports(ann.Type, c.PackageName, impSet)
+		}
+	}
 	for _, f := range c.Fields {
 		if f != nil && f.Variable != nil {
 			gatherTypeImports(f.Variable.Type, c.PackageName, impSet)
@@ -128,6 +133,11 @@ func gatherMethodImports(m *ast.MethodDefinition, currentPkg string, impSet map[
 	}
 	for _, ex := range m.ThrowsExceptions {
 		gatherTypeImports(ex, currentPkg, impSet)
+	}
+	for _, ann := range m.Annotations {
+		if ann != nil {
+			gatherTypeImports(ann.Type, currentPkg, impSet)
+		}
 	}
 }
 

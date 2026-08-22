@@ -18,6 +18,8 @@ import (
 	"testing"
 )
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestParsePluginArguments(t *testing.T) {
 	param := "grpc-service-config=/tmp/logging_grpc_service_config.json,gapic-config=/tmp/logging_gapic.yaml,api-service-config=/tmp/logging.yaml,transport=grpc+rest,repo=googleapis/google-cloud-java,artifact=google-cloud-logging,metadata,rest-numeric-enums,generate-version-java"
 	args := ParsePluginArgumentsString(param)
@@ -51,6 +53,8 @@ func TestParsePluginArguments(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestParsePluginArgumentsFileEndings(t *testing.T) {
 	param := "/tmp/foo_grpc_service_config.json,/tmp/foo_gapic.yaml"
 	args := ParsePluginArgumentsString(param)
@@ -60,5 +64,22 @@ func TestParsePluginArgumentsFileEndings(t *testing.T) {
 	}
 	if args.GapicYamlConfigPath != "/tmp/foo_gapic.yaml" {
 		t.Errorf("unexpected GapicYamlConfigPath: %s", args.GapicYamlConfigPath)
+	}
+}
+
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
+func TestParsePluginArgumentsWithEscapedCommas(t *testing.T) {
+	param := `repo=googleapis/google-cloud-java\,escaped,artifact=google-cloud-logging\\test,metadata`
+	args := ParsePluginArgumentsString(param)
+
+	if args.Repo != "googleapis/google-cloud-java,escaped" {
+		t.Errorf("unexpected Repo with escaped comma: %s", args.Repo)
+	}
+	if args.Artifact != "google-cloud-logging\\test" {
+		t.Errorf("unexpected Artifact with escaped backslash: %s", args.Artifact)
+	}
+	if !args.HasMetadata {
+		t.Errorf("expected HasMetadata to be true")
 	}
 }

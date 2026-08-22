@@ -31,8 +31,14 @@ import (
 func Parse(req *pluginpb.CodeGeneratorRequest) (*model.GapicContext, error) {
 	pluginArgs := ParsePluginArguments(req)
 
-	svcCfg, _ := ParseServiceConfigJSON(pluginArgs.GrpcServiceConfigPath)
-	batching, lroSettings, langSettings, _ := ParseGapicYaml(pluginArgs.GapicYamlConfigPath)
+	svcCfg, err := ParseServiceConfigJSON(pluginArgs.GrpcServiceConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	batching, lroSettings, langSettings, err := ParseGapicYaml(pluginArgs.GapicYamlConfigPath)
+	if err != nil {
+		return nil, err
+	}
 
 	ctx := &model.GapicContext{
 		Messages:               make(map[string]*model.Message),
@@ -149,7 +155,7 @@ func parseMessage(msg *descriptorpb.DescriptorProto, protoPkg, javaPkg string) *
 	for _, f := range msg.GetField() {
 		field := &model.Field{
 			Name:       f.GetName(),
-			Type:       protoTypeToTypeNode(f, javaPkg),
+			Type:       protoTypeToTypeNode(f, protoPkg, javaPkg),
 			IsRepeated: f.GetLabel() == descriptorpb.FieldDescriptorProto_LABEL_REPEATED,
 		}
 		if f.Options != nil {
@@ -177,7 +183,7 @@ func parseMessage(msg *descriptorpb.DescriptorProto, protoPkg, javaPkg string) *
 	return m
 }
 
-func protoTypeToTypeNode(f *descriptorpb.FieldDescriptorProto, javaPkg string) *ast.TypeNode {
+func protoTypeToTypeNode(f *descriptorpb.FieldDescriptorProto, protoPkg, javaPkg string) *ast.TypeNode {
 	switch f.GetType() {
 	case descriptorpb.FieldDescriptorProto_TYPE_DOUBLE:
 		return ast.TypeDouble
@@ -199,9 +205,17 @@ func protoTypeToTypeNode(f *descriptorpb.FieldDescriptorProto, javaPkg string) *
 		return ast.ObjectType("ByteString", "com.google.protobuf")
 	case descriptorpb.FieldDescriptorProto_TYPE_MESSAGE, descriptorpb.FieldDescriptorProto_TYPE_ENUM:
 		rawType := f.GetTypeName()
-		parts := strings.Split(strings.TrimPrefix(rawType, "."), ".")
+		trimmed := strings.TrimPrefix(rawType, ".")
+		parts := strings.Split(trimmed, ".")
 		typeName := parts[len(parts)-1]
-		return ast.ObjectType(typeName, javaPkg)
+		pkg := javaPkg
+		if len(parts) > 1 {
+			typeProtoPkg := strings.Join(parts[:len(parts)-1], ".")
+			if typeProtoPkg != protoPkg {
+				pkg = "com." + typeProtoPkg
+			}
+		}
+		return ast.ObjectType(typeName, pkg)
 	default:
 		return ast.TypeObject
 	}
@@ -354,7 +368,8 @@ func checkPaging(method *model.Method, inputMsgName, outputMsgName string, ctx *
 	var hasPageSize, hasPageToken, hasNextPageToken bool
 	var pageSizeField, pageTokenField, nextPageTokenField, resourceListField string
 
-	for name, f := range inMsg.Fields {
+	for _, f := range inMsg.FieldList {
+		name := f.Name
 		if (name == "page_size" || name == "max_results") && (f.Type == ast.TypeInt || f.Type == ast.TypeLong) {
 			hasPageSize = true
 			pageSizeField = name
@@ -365,7 +380,8 @@ func checkPaging(method *model.Method, inputMsgName, outputMsgName string, ctx *
 		}
 	}
 
-	for name, f := range outMsg.Fields {
+	for _, f := range outMsg.FieldList {
+		name := f.Name
 		if name == "next_page_token" && f.Type == ast.TypeString {
 			hasNextPageToken = true
 			nextPageTokenField = name

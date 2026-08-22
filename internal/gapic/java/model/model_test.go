@@ -20,6 +20,8 @@ import (
 	"github.com/googleapis/librarian/internal/gapic/java/engine/ast"
 )
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestTransportParsing(t *testing.T) {
 	if ParseTransport("rest") != TransportREST {
 		t.Errorf("expected REST transport")
@@ -35,6 +37,8 @@ func TestTransportParsing(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestFieldRequired(t *testing.T) {
 	fReq := &Field{
 		Name:      "parent",
@@ -55,6 +59,8 @@ func TestFieldRequired(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestGapicContextLookup(t *testing.T) {
 	ctx := &GapicContext{
 		Messages: map[string]*Message{
@@ -115,6 +121,8 @@ func TestGapicContextLookup(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestMethodAndServiceModels(t *testing.T) {
 	method := &Method{
 		Name:       "Echo",

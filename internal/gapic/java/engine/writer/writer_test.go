@@ -21,6 +21,8 @@ import (
 	"github.com/googleapis/librarian/internal/gapic/java/engine/ast"
 )
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestWriteClassBasic(t *testing.T) {
 	clazz := &ast.ClassDefinition{
 		PackageName: "com.google.example.v1",
@@ -93,6 +95,8 @@ func TestWriteClassBasic(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestWriteClassEnum(t *testing.T) {
 	clazz := &ast.ClassDefinition{
 		PackageName: "com.google.example.v1",
@@ -112,5 +116,37 @@ func TestWriteClassEnum(t *testing.T) {
 	}
 	if !strings.Contains(code, "MONDAY,") || !strings.Contains(code, "WEDNESDAY;") {
 		t.Errorf("missing enum values, got:\n%s", code)
+	}
+}
+
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
+func TestWriteClassWithAnnotations(t *testing.T) {
+	clazz := &ast.ClassDefinition{
+		PackageName: "com.google.example.v1",
+		Scope:       ast.Public,
+		Name:        "AnnotatedService",
+		Annotations: []*ast.AnnotationNode{
+			{Type: ast.ObjectType("Generated", "javax.annotation")},
+		},
+		Methods: []*ast.MethodDefinition{
+			{
+				Scope:      ast.Public,
+				Name:       "annotatedMethod",
+				ReturnType: ast.TypeVoid,
+				Annotations: []*ast.AnnotationNode{
+					{Type: ast.ObjectType("Beta", "com.google.api.core")},
+				},
+				Statements: []ast.Statement{},
+			},
+		},
+	}
+
+	code := WriteClass(clazz)
+	if !strings.Contains(code, "import com.google.api.core.Beta;") {
+		t.Errorf("missing method annotation import in code:\n%s", code)
+	}
+	if !strings.Contains(code, "import javax.annotation.Generated;") {
+		t.Errorf("missing class annotation import in code:\n%s", code)
 	}
 }

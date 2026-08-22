@@ -75,8 +75,26 @@ func ParsePluginArgumentsString(param string) *PluginArguments {
 		return args
 	}
 
-	parts := strings.SplitSeq(param, ",")
-	for part := range parts {
+	var parts []string
+	var cur strings.Builder
+	escaped := false
+	for i := 0; i < len(param); i++ {
+		ch := param[i]
+		if escaped {
+			cur.WriteByte(ch)
+			escaped = false
+		} else if ch == '\\' {
+			escaped = true
+		} else if ch == ',' {
+			parts = append(parts, cur.String())
+			cur.Reset()
+		} else {
+			cur.WriteByte(ch)
+		}
+	}
+	parts = append(parts, cur.String())
+
+	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if part == "" {
 			continue

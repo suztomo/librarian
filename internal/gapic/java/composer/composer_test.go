@@ -15,6 +15,7 @@
 package composer
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/googleapis/librarian/internal/gapic/java/engine/ast"
@@ -67,6 +68,8 @@ func createTestContext() *model.GapicContext {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestComposeServiceClasses(t *testing.T) {
 	ctx := createTestContext()
 	classes := ComposeServiceClasses(ctx)
@@ -77,12 +80,14 @@ func TestComposeServiceClasses(t *testing.T) {
 
 	// Verify each class renders to valid Java code without panic
 	classNames := make(map[string]bool)
+	classCode := make(map[string]string)
 	for _, c := range classes {
 		code := writer.WriteClass(c.ClassDefinition)
 		if len(code) == 0 {
 			t.Errorf("empty code generated for class %s", c.ClassDefinition.Name)
 		}
 		classNames[c.ClassDefinition.Name] = true
+		classCode[c.ClassDefinition.Name] = code
 	}
 
 	expectedClasses := []string{
@@ -103,8 +108,16 @@ func TestComposeServiceClasses(t *testing.T) {
 			t.Errorf("missing expected class %s", exp)
 		}
 	}
+
+	// Verify that signature overload populates request builder fields
+	clientCode := classCode["EchoClient"]
+	if !strings.Contains(clientCode, "EchoRequest.newBuilder().setContent(content).build()") {
+		t.Errorf("EchoClient missing builder setter invocation in signature overload, got:\n%s", clientCode)
+	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestComposePackageInfo(t *testing.T) {
 	ctx := createTestContext()
 	pkgInfo := ComposePackageInfo(ctx)
@@ -117,6 +130,8 @@ func TestComposePackageInfo(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestComposeNativeReflectConfig(t *testing.T) {
 	ctx := createTestContext()
 	reflectConfigs := ComposeNativeReflectConfig(ctx)

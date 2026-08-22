@@ -18,6 +18,8 @@ import (
 	"testing"
 )
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestKeywords(t *testing.T) {
 	keywords := []string{
 		"abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const",
@@ -40,6 +42,8 @@ func TestKeywords(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestLiterals(t *testing.T) {
 	literals := []string{"true", "false", "null"}
 	for _, lit := range literals {
@@ -52,6 +56,8 @@ func TestLiterals(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestOperators(t *testing.T) {
 	ops := []string{"=", "+", "-", "*", "/", "%", "==", "!=", "<", ">", "<=", ">=", "&&", "||", "!", "+=", "-=", "->"}
 	for _, op := range ops {
@@ -64,6 +70,8 @@ func TestOperators(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestSeparators(t *testing.T) {
 	seps := []string{"(", ")", "{", "}", "[", "]", ";", ",", ".", "...", "@", "::"}
 	for _, sep := range seps {
@@ -73,6 +81,8 @@ func TestSeparators(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestValidIdentifier(t *testing.T) {
 	valid := []string{"foo", "_bar", "$baz", "CamelCase", "snake_case", "x123", "a_b_c$1"}
 	for _, v := range valid {
@@ -88,6 +98,8 @@ func TestValidIdentifier(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestEscapeKeyword(t *testing.T) {
 	tests := []struct {
 		input    string

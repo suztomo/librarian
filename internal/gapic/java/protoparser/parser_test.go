@@ -23,6 +23,8 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestParserWithCodeGeneratorRequest(t *testing.T) {
 	httpRule := &annotations.HttpRule{
 		Pattern: &annotations.HttpRule_Post{
@@ -120,6 +122,8 @@ func TestParserWithCodeGeneratorRequest(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestParserWithLROStreamingAndPagination(t *testing.T) {
 	req := &pluginpb.CodeGeneratorRequest{
 		FileToGenerate: []string{"google/example/v1/library.proto"},
@@ -214,5 +218,70 @@ func TestParserWithLROStreamingAndPagination(t *testing.T) {
 				t.Errorf("unexpected pagination fields: %+v", m)
 			}
 		}
+	}
+}
+
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
+func TestParserWithImportedTypes(t *testing.T) {
+	req := &pluginpb.CodeGeneratorRequest{
+		FileToGenerate: []string{"google/example/v1/event.proto"},
+		ProtoFile: []*descriptorpb.FileDescriptorProto{
+			{
+				Name:    new("google/example/v1/event.proto"),
+				Package: new("google.example.v1"),
+				Options: &descriptorpb.FileOptions{
+					JavaPackage: new("com.google.example.v1"),
+				},
+				MessageType: []*descriptorpb.DescriptorProto{
+					{
+						Name: new("Event"),
+						Field: []*descriptorpb.FieldDescriptorProto{
+							{
+								Name:     new("timestamp"),
+								Type:     descriptorpb.FieldDescriptorProto_TYPE_MESSAGE.Enum(),
+								TypeName: new(".google.protobuf.Timestamp"),
+								Label:    descriptorpb.FieldDescriptorProto_LABEL_OPTIONAL.Enum(),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ctx, err := Parse(req)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+
+	msg := ctx.FindMessage("google.example.v1.Event")
+	if msg == nil {
+		t.Fatalf("message Event not found")
+	}
+	f := msg.Fields["timestamp"]
+	if f == nil {
+		t.Fatalf("field timestamp not found")
+	}
+	if f.Type.Package != "com.google.protobuf" || f.Type.Name != "Timestamp" {
+		t.Errorf("expected package com.google.protobuf and type Timestamp, got package=%s name=%s", f.Type.Package, f.Type.Name)
+	}
+}
+
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
+func TestParserInvalidConfigPaths(t *testing.T) {
+	req := &pluginpb.CodeGeneratorRequest{
+		Parameter: new("grpc-service-config=/nonexistent/path.json"),
+	}
+	if _, err := Parse(req); err == nil {
+		t.Errorf("expected error for non-existent grpc-service-config")
+	}
+
+	reqYaml := &pluginpb.CodeGeneratorRequest{
+		Parameter: new("gapic-config=/nonexistent/path.yaml"),
+	}
+	if _, err := Parse(reqYaml); err == nil {
+		t.Errorf("expected error for non-existent gapic-config")
 	}
 }

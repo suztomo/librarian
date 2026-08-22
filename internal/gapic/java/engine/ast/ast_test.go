@@ -18,6 +18,8 @@ import (
 	"testing"
 )
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestTypeNodeString(t *testing.T) {
 	tests := []struct {
 		typeNode *TypeNode
@@ -60,6 +62,8 @@ func TestTypeNodeString(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestValueExprs(t *testing.T) {
 	if IntVal(42).Literal != "42" {
 		t.Errorf("expected 42")
@@ -84,6 +88,8 @@ func TestValueExprs(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestASTDefinitions(t *testing.T) {
 	v := &Variable{Name: "client", Type: ObjectType("EchoClient", "com.google.example.v1")}
 	ve := &VariableExpr{
@@ -143,6 +149,8 @@ func TestASTDefinitions(t *testing.T) {
 	}
 }
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestComplexStatementsAndExpressions(t *testing.T) {
 	// If statement with ElseIf and Else
 	ifStmt := &IfStatement{

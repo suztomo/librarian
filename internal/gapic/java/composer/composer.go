@@ -331,6 +331,29 @@ func ComposeClientClass(svc *model.Service, ctx *model.GapicContext) *ast.ClassD
 				})
 			}
 
+			var builderExpr ast.Expr = &ast.MethodInvocationExpr{
+				TargetType: m.InputType,
+				MethodName: "newBuilder",
+			}
+			for _, fieldName := range sig {
+				builderExpr = &ast.MethodInvocationExpr{
+					TargetExpr: builderExpr,
+					MethodName: "set" + strcase.ToCamel(fieldName),
+					Arguments: []ast.Expr{
+						&ast.VariableExpr{
+							Variable: &ast.Variable{
+								Name: strcase.ToLowerCamel(fieldName),
+								Type: nil,
+							},
+						},
+					},
+				}
+			}
+			initExpr := &ast.MethodInvocationExpr{
+				TargetExpr: builderExpr,
+				MethodName: "build",
+			}
+
 			c.Methods = append(c.Methods, &ast.MethodDefinition{
 				Scope:      ast.Public,
 				Modifiers:  []ast.Modifier{ast.Final},
@@ -344,13 +367,7 @@ func ComposeClientClass(svc *model.Service, ctx *model.GapicContext) *ast.ClassD
 							Name: "request",
 							Type: m.InputType,
 						},
-						InitExpr: &ast.MethodInvocationExpr{
-							TargetExpr: &ast.MethodInvocationExpr{
-								TargetType: m.InputType,
-								MethodName: "newBuilder",
-							},
-							MethodName: "build",
-						},
+						InitExpr: initExpr,
 					},
 					&ast.ReturnExpr{
 						Expr: &ast.MethodInvocationExpr{

@@ -24,6 +24,8 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
+// Ported from gapic-generator-java:
+// https://github.com/googleapis/google-cloud-java/commits/2a27c2c39/sdk-platform-java/gapic-generator-java
 func TestGenerateGapicEndToEnd(t *testing.T) {
 	httpRule := &annotations.HttpRule{
 		Pattern: &annotations.HttpRule_Post{
