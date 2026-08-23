@@ -19,37 +19,49 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/googleapis/librarian/internal/command"
 	"github.com/googleapis/librarian/internal/config"
+	"golang.org/x/sync/errgroup"
 )
 
 const maxFilesPerFormatBatch = 2000
 
-// Format formats Java client libraries using google-java-format in batches.
+// Format formats Java client libraries using google-java-format in parallel per library.
 func Format(ctx context.Context, libraries ...*config.Library) error {
-	var allFiles []string
-	for _, lib := range libraries {
-		files, err := collectJavaFiles(lib.Output)
-		if err != nil {
-			return fmt.Errorf("failed to find java files for formatting in %q: %w", lib.Name, err)
-		}
-		allFiles = append(allFiles, files...)
-	}
 	env, err := getToolsEnv()
 	if err != nil {
 		return err
 	}
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(runtime.NumCPU())
+	for _, lib := range libraries {
+		g.Go(func() error {
+			return formatLibrary(gctx, env, lib)
+		})
+	}
+	return g.Wait()
+}
+
+func formatLibrary(ctx context.Context, env map[string]string, library *config.Library) error {
+	files, err := collectJavaFiles(library.Output)
+	if err != nil {
+		return fmt.Errorf("failed to find java files for formatting in %q: %w", library.Name, err)
+	}
+	if len(files) == 0 {
+		return nil
+	}
 	// Batch file paths in chunks of maxFilesPerFormatBatch (2,000 files).
 	// Passing 2,000 files per CLI invocation avoids exceeding OS command-line length limits (ARG_MAX)
 	// while preventing JVM heap exhaustion on RAM-constrained CI runners.
-	for i := 0; i < len(allFiles); i += maxFilesPerFormatBatch {
-		end := min(i+maxFilesPerFormatBatch, len(allFiles))
-		chunk := allFiles[i:end]
+	for i := 0; i < len(files); i += maxFilesPerFormatBatch {
+		end := min(i+maxFilesPerFormatBatch, len(files))
+		chunk := files[i:end]
 		args := append([]string{"--replace"}, chunk...)
 		if err := command.RunWithEnv(ctx, env, "google-java-format", args...); err != nil {
-			return fmt.Errorf("failed to format batch [%d:%d]: %w", i, end, err)
+			return fmt.Errorf("failed to format %q batch [%d:%d]: %w", library.Name, i, end, err)
 		}
 	}
 	return nil

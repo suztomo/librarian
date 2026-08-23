@@ -446,21 +446,94 @@ func TestGenerateAPI_NoTools(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Verify that runProtoc was called 3 times: proto, grpc, and gapic.
-	if len(calls) != 3 {
-		t.Errorf("expected 3 calls to runProtoc, got %d", len(calls))
+	// In the default case, proto and grpc share the same proto file list and are combined
+	// into call 0, while gapic includes common_resources.proto and runs in call 1.
+	if len(calls) != 2 {
+		t.Fatalf("expected 2 calls to runProtoc, got %d", len(calls))
 	}
-	// Basic validation of GAPIC generation arguments (the 3rd call).
-	gapicArgs := calls[2]
-	foundGAPICOut := false
-	for _, arg := range gapicArgs {
+	args0 := calls[0]
+	var foundJavaOut, foundGRPCOut bool
+	for _, arg := range args0 {
+		if strings.HasPrefix(arg, "--java_out=") {
+			foundJavaOut = true
+		}
+		if strings.HasPrefix(arg, "--java_grpc_out=") {
+			foundGRPCOut = true
+		}
+		if strings.HasPrefix(arg, "--java_gapic_out=") {
+			t.Errorf("unexpected --java_gapic_out in call 0: %v", args0)
+		}
+	}
+	if !foundJavaOut {
+		t.Errorf("expected --java_out in call 0 args, but not found: %v", args0)
+	}
+	if !foundGRPCOut {
+		t.Errorf("expected --java_grpc_out in call 0 args, but not found: %v", args0)
+	}
+
+	args1 := calls[1]
+	var foundGAPICOut bool
+	for _, arg := range args1 {
 		if strings.HasPrefix(arg, "--java_gapic_out=") {
 			foundGAPICOut = true
-			break
+		}
+		if strings.HasPrefix(arg, "--java_out=") || strings.HasPrefix(arg, "--java_grpc_out=") {
+			t.Errorf("unexpected proto/grpc flag in call 1: %v", args1)
 		}
 	}
 	if !foundGAPICOut {
-		t.Errorf("expected --java_gapic_out in gapicArgs, but not found: %v", gapicArgs)
+		t.Errorf("expected --java_gapic_out in call 1 args, but not found: %v", args1)
+	}
+
+	// Verify that when omit_common_resources is true and proto lists match, all 3 are combined into 1 call.
+	calls = nil
+	apiOmit := &config.API{
+		Path: "google/cloud/secretmanager/v1",
+		Java: &config.JavaAPI{
+			OmitCommonResources: true,
+		},
+	}
+	libraryOmit := &config.Library{
+		Name:   "secretmanager",
+		Output: outdir,
+		APIs:   []*config.API{apiOmit},
+	}
+	if _, err := Fill(libraryOmit); err != nil {
+		t.Fatal(err)
+	}
+	err = generateAPI(t.Context(), generateAPIParams{
+		cfg:     cfg,
+		api:     apiOmit,
+		library: libraryOmit,
+		srcCfg:  sources.NewSourceConfig(&sources.Sources{Googleapis: googleapisDir}, nil),
+		outdir:  outdir,
+		metadata: &repoMetadata{
+			NamePretty:     "Secret Manager",
+			APIDescription: "Secret Manager API",
+		},
+		apiCfg: apiCfg,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("expected 1 combined call to runProtoc with omit_common_resources, got %d", len(calls))
+	}
+	combinedArgs := calls[0]
+	var foundAllJava, foundAllGRPC, foundAllGAPIC bool
+	for _, arg := range combinedArgs {
+		if strings.HasPrefix(arg, "--java_out=") {
+			foundAllJava = true
+		}
+		if strings.HasPrefix(arg, "--java_grpc_out=") {
+			foundAllGRPC = true
+		}
+		if strings.HasPrefix(arg, "--java_gapic_out=") {
+			foundAllGAPIC = true
+		}
+	}
+	if !foundAllJava || !foundAllGRPC || !foundAllGAPIC {
+		t.Errorf("expected all 3 plugins in combined args, got: %v", combinedArgs)
 	}
 }
 

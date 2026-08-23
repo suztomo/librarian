@@ -23,6 +23,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/googleapis/librarian/internal/config"
@@ -162,31 +163,56 @@ func generateAPI(ctx context.Context, params generateAPIParams) error {
 	if params.cfg.Tools != nil && params.cfg.Tools.Protoc != nil {
 		pc = params.cfg.Tools.Protoc
 	}
-	// 1. Generate standard Protocol Buffer Java classes.
+	transport := params.apiCfg.Transport(config.LanguageJava)
+	type pluginGroup struct {
+		flags []string
+		files []string
+	}
+	var groups []pluginGroup
+
+	addPlugin := func(flags []string, files []string) {
+		for i := range groups {
+			if slices.Equal(groups[i].files, files) {
+				groups[i].flags = append(groups[i].flags, flags...)
+				return
+			}
+		}
+		groups = append(groups, pluginGroup{flags: flags, files: files})
+	}
+
 	if shouldGenerateProto(javaAPI) {
 		protoProtos := filterProtos(apiProtos, javaAPI.SkipProtoClassGeneration, primaryDir)
 		protoProtos = append(protoProtos, additionalProtosToGenerateAbs...)
-		args := protoProtocArgs(protoProtos, params.srcCfg, protoDir)
-		if err := runProtoc(ctx, pc, args); err != nil {
-			return fmt.Errorf("failed to generate proto: %w", err)
-		}
+		addPlugin([]string{fmt.Sprintf("--java_out=%s", protoDir)}, protoProtos)
 	}
-	// 2. Generate gRPC service stubs (skipped if transport is rest).
-	transport := params.apiCfg.Transport(config.LanguageJava)
 	if shouldGenerateGRPC(javaAPI) && transport != "rest" {
-		if err := runProtoc(ctx, pc, gRPCProtocArgs(apiProtos, params.srcCfg, gRPCDir)); err != nil {
-			return fmt.Errorf("failed to generate gRPC module: %w", err)
-		}
+		addPlugin([]string{fmt.Sprintf("--java_grpc_out=%s", gRPCDir)}, apiProtos)
 	}
-	// 3. Generate GAPIC library.
 	if shouldGenerateGAPIC(javaAPI) || shouldGenerateResourceNames(javaAPI) {
 		gapicOpts, err := resolveGAPICOptions(params.cfg, params.library, params.api, primaryDir, params.apiCfg)
 		if err != nil {
 			return fmt.Errorf("failed to resolve gapic options: %w", err)
 		}
-		args := gapicProtocArgs(apiProtos, allAdditionalProtosAbs, params.srcCfg, gapicDir, gapicOpts)
+		var gapicProtos []string
+		seen := make(map[string]bool)
+		for _, p := range append(slices.Clone(apiProtos), allAdditionalProtosAbs...) {
+			if !seen[p] {
+				seen[p] = true
+				gapicProtos = append(gapicProtos, p)
+			}
+		}
+		addPlugin([]string{
+			fmt.Sprintf("--java_gapic_out=metadata:%s", gapicDir),
+			"--java_gapic_opt=" + strings.Join(gapicOpts, ","),
+		}, gapicProtos)
+	}
+
+	for _, g := range groups {
+		args := baseProtocArgs(params.srcCfg)
+		args = append(args, g.flags...)
+		args = append(args, g.files...)
 		if err := runProtoc(ctx, pc, args); err != nil {
-			return fmt.Errorf("failed to generate gapic: %w", err)
+			return fmt.Errorf("failed to generate api %q: %w", params.api.Path, err)
 		}
 	}
 
