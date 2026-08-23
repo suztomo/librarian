@@ -16,6 +16,7 @@ package librarian
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -132,5 +133,37 @@ func TestFakeClean_Error(t *testing.T) {
 	wantErr := fs.ErrNotExist
 	if !errors.Is(err, wantErr) {
 		t.Errorf("fakeClean(), error = %v, wantErr %v", err, wantErr)
+	}
+}
+
+func TestCleanLibraries_ParallelMultiple(t *testing.T) {
+	t.Parallel()
+	tmpDir := t.TempDir()
+	cfg := &config.Config{Language: config.LanguageFake}
+
+	var libs []*config.Library
+	for i := 1; i <= 5; i++ {
+		out := filepath.Join(tmpDir, fmt.Sprintf("output%d", i))
+		lib := &config.Library{
+			Name:   fmt.Sprintf("lib-%d", i),
+			Output: out,
+		}
+		libs = append(libs, lib)
+		if err := os.MkdirAll(out, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(out, "README.md"), []byte("hello"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := cleanLibraries(t.Context(), cfg.Language, libs); err != nil {
+		t.Fatalf("cleanLibraries failed: %v", err)
+	}
+
+	for _, lib := range libs {
+		if _, err := os.Stat(filepath.Join(lib.Output, "README.md")); !errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("expected README.md in %s to be removed, but err = %v", lib.Output, err)
+		}
 	}
 }

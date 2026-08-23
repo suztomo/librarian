@@ -93,6 +93,12 @@ func TestFormat(t *testing.T) {
 				return []*config.Library{{Output: root}}
 			},
 		},
+		{
+			name: "empty library list",
+			setup: func(t *testing.T, root string) []*config.Library {
+				return nil
+			},
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
