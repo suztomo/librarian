@@ -105,6 +105,7 @@ func TestJavaPackageFromProto(t *testing.T) {
 		{"google.cloud.secretmanager.v1", "com.google.cloud.secretmanager.v1"},
 		{".google.cloud.secretmanager.v1", "com.google.cloud.secretmanager.v1"},
 		{"com.google.cloud.secretmanager.v1", "com.google.cloud.secretmanager.v1"},
+		{"io.grafeas.v1", "io.grafeas.v1"},
 		{"custom.company.v1", "com.custom.company.v1"},
 	}
 

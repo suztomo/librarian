@@ -102,7 +102,7 @@ Java serves as the initial vanguard for migrating other GAPIC generators (PHP, R
   - REST Implementation: `stub/HttpJson<Service>Stub.java` + `stub/HttpJson<Service>CallableFactory.java`
 
 ### 3.4 Resource Names & Pattern Matching (`resource_name_composer.go`)
-* **Decision**: Generates strongly-typed resource name classes implementing `com.google.api.resourcenames.ResourceName` with `PathTemplate` pattern matching, factory methods (`of`, `format`, `parse`, `isParsableFrom`), and equality helpers.
+* **Decision**: Generates strongly-typed resource name classes implementing `com.google.api.resourcenames.ResourceName` with full single- and multi-pattern matching via `PathTemplate`, dedicated factory methods (`of`, `of<PatternVariant>Name`), format methods (`format`, `format<PatternVariant>Name`), parsing (`parse`, `isParsableFrom`), and equality helpers.
 
 ### 3.5 Cloud Native & GraalVM Readiness
 * **Decision**:

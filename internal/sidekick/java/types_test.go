@@ -74,3 +74,46 @@ func TestWellKnownTypes(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+func TestNestedTypes(t *testing.T) {
+	parentMsg := &api.Message{
+		ID:      ".google.cloud.secretmanager.v1.Secret",
+		Name:    "Secret",
+		Package: "google.cloud.secretmanager.v1",
+	}
+	nestedChild := &api.Message{
+		ID:      ".google.cloud.secretmanager.v1.Secret.Rotation",
+		Name:    "Rotation",
+		Package: "google.cloud.secretmanager.v1",
+		Parent:  parentMsg,
+	}
+	nestedGrandChild := &api.Message{
+		ID:      ".google.cloud.secretmanager.v1.Secret.Rotation.Schedule",
+		Name:    "Schedule",
+		Package: "google.cloud.secretmanager.v1",
+		Parent:  nestedChild,
+	}
+
+	childType := MessageToJavaType(nestedChild)
+	if got, want := childType.Name, "Secret.Rotation"; got != want {
+		t.Errorf("childType.Name = %q, want %q", got, want)
+	}
+	if got, want := childType.FullName(), "com.google.cloud.secretmanager.v1.Secret.Rotation"; got != want {
+		t.Errorf("childType.FullName = %q, want %q", got, want)
+	}
+
+	grandChildType := MessageToJavaType(nestedGrandChild)
+	if got, want := grandChildType.Name, "Secret.Rotation.Schedule"; got != want {
+		t.Errorf("grandChildType.Name = %q, want %q", got, want)
+	}
+
+	nestedEnum := &api.Enum{
+		Name:    "State",
+		Package: "google.cloud.secretmanager.v1",
+		Parent:  parentMsg,
+	}
+	enumType := EnumToJavaType(nestedEnum)
+	if got, want := enumType.Name, "Secret.State"; got != want {
+		t.Errorf("enumType.Name = %q, want %q", got, want)
+	}
+}

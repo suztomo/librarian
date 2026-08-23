@@ -15,6 +15,7 @@
 package java
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/googleapis/librarian/internal/sidekick/api"
@@ -114,5 +115,43 @@ func TestComposeAll(t *testing.T) {
 		if err != nil || len(reflectBytes) == 0 {
 			t.Errorf("WriteReflectConfig failed: %v", err)
 		}
+	}
+}
+
+func TestComposeMultiPatternResourceName(t *testing.T) {
+	res := &ResourceAnnotation{
+		Type:        "secretmanager.googleapis.com/Secret",
+		ClassName:   "SecretName",
+		PackageName: "com.google.cloud.secretmanager.v1",
+		Patterns: []string{
+			"projects/{project}/secrets/{secret}",
+			"projects/{project}/locations/{location}/secrets/{secret}",
+		},
+	}
+
+	cls := ComposeResourceNameClass(res)
+	if cls == nil {
+		t.Fatalf("ComposeResourceNameClass returned nil")
+	}
+
+	src, err := writer.WriteClass(cls)
+	if err != nil {
+		t.Fatalf("WriteClass failed: %v", err)
+	}
+
+	if !strings.Contains(src, "PROJECT_SECRET_PATH_TEMPLATE") {
+		t.Errorf("Missing PROJECT_SECRET_PATH_TEMPLATE in:\n%s", src)
+	}
+	if !strings.Contains(src, "PROJECT_LOCATION_SECRET_PATH_TEMPLATE") {
+		t.Errorf("Missing PROJECT_LOCATION_SECRET_PATH_TEMPLATE in:\n%s", src)
+	}
+	if !strings.Contains(src, "ofProjectSecretName") {
+		t.Errorf("Missing ofProjectSecretName in:\n%s", src)
+	}
+	if !strings.Contains(src, "ofProjectLocationSecretName") {
+		t.Errorf("Missing ofProjectLocationSecretName in:\n%s", src)
+	}
+	if !strings.Contains(src, "PROJECT_SECRET_PATH_TEMPLATE.matches(formattedString) || PROJECT_LOCATION_SECRET_PATH_TEMPLATE.matches(formattedString)") {
+		t.Errorf("Missing isParsableFrom multi-pattern check in:\n%s", src)
 	}
 }

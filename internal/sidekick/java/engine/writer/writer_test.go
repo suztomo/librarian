@@ -94,3 +94,32 @@ func TestWriteClass(t *testing.T) {
 		t.Errorf("Missing getSettings method in:\n%s", src)
 	}
 }
+
+func TestResolveImports(t *testing.T) {
+	classDef := &ast.ClassDefinition{
+		Package: "com.google.cloud.secretmanager.v1",
+		Name:    "SecretManagerServiceClient",
+		Fields: []*ast.FieldDefinition{
+			{
+				Name: "samePackageInner",
+				Type: ast.ObjectType("Secret.Rotation", "com.google.cloud.secretmanager.v1"),
+			},
+			{
+				Name: "otherPackageNested",
+				Type: ast.ObjectType("DescriptorProtos.FileDescriptorProto", "com.google.protobuf"),
+			},
+			{
+				Name: "javaLangType",
+				Type: ast.ObjectType("String", "java.lang"),
+			},
+		},
+	}
+
+	imports, _ := resolveImports(classDef)
+	if len(imports) != 1 {
+		t.Fatalf("Expected 1 import, got %d: %v", len(imports), imports)
+	}
+	if imports[0] != "com.google.protobuf.DescriptorProtos" {
+		t.Errorf("Expected com.google.protobuf.DescriptorProtos, got %q", imports[0])
+	}
+}

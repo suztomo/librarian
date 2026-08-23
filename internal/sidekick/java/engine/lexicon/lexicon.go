@@ -137,7 +137,8 @@ func JavaPackageFromProto(protoPkg string) string {
 	if strings.HasPrefix(protoPkg, "google.") {
 		return "com." + protoPkg
 	}
-	if strings.HasPrefix(protoPkg, "com.") || strings.HasPrefix(protoPkg, "org.") || strings.HasPrefix(protoPkg, "net.") {
+	if strings.HasPrefix(protoPkg, "com.") || strings.HasPrefix(protoPkg, "org.") || strings.HasPrefix(protoPkg, "net.") ||
+		strings.HasPrefix(protoPkg, "io.") || strings.HasPrefix(protoPkg, "gov.") || strings.HasPrefix(protoPkg, "edu.") {
 		return protoPkg
 	}
 	return "com." + protoPkg

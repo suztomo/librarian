@@ -262,27 +262,28 @@ func writeAnnotation(sb *strings.Builder, ann *ast.AnnotationNode, indent string
 }
 
 func resolveImports(classDef *ast.ClassDefinition) ([]string, []string) {
-	typeMap := make(map[string]bool)
-	collectTypesFromClass(classDef, typeMap)
+	var types []*ast.TypeNode
+	collectTypesFromClass(classDef, &types)
 
 	var imports []string
 	seen := make(map[string]bool)
 
-	for fullType := range typeMap {
-		if fullType == "" {
+	for _, t := range types {
+		if t == nil || t.Package == "" || t.Kind != ast.KindObject {
 			continue
 		}
-		idx := strings.LastIndex(fullType, ".")
-		if idx == -1 {
+		if t.Package == "java.lang" || t.Package == classDef.Package {
 			continue
 		}
-		pkg := fullType[:idx]
-		if pkg == "java.lang" || pkg == classDef.Package {
+		// Extract top-level class name if nested (e.g. "DescriptorProtos.FileDescriptorProto" -> "DescriptorProtos")
+		topLevelName, _, _ := strings.Cut(t.Name, ".")
+		if topLevelName == "" {
 			continue
 		}
-		if !seen[fullType] {
-			seen[fullType] = true
-			imports = append(imports, fullType)
+		fullImport := t.Package + "." + topLevelName
+		if !seen[fullImport] {
+			seen[fullImport] = true
+			imports = append(imports, fullImport)
 		}
 	}
 
@@ -300,66 +301,64 @@ func resolveImports(classDef *ast.ClassDefinition) ([]string, []string) {
 	return imports, staticImports
 }
 
-func collectTypesFromClass(classDef *ast.ClassDefinition, typeMap map[string]bool) {
+func collectTypesFromClass(classDef *ast.ClassDefinition, types *[]*ast.TypeNode) {
 	if classDef.Extends != nil {
-		collectType(classDef.Extends, typeMap)
+		collectType(classDef.Extends, types)
 	}
 	for _, imp := range classDef.Implements {
-		collectType(imp, typeMap)
+		collectType(imp, types)
 	}
 	for _, ann := range classDef.Annotations {
-		collectType(ann.Type, typeMap)
+		collectType(ann.Type, types)
 	}
 	for _, f := range classDef.Fields {
-		collectType(f.Type, typeMap)
+		collectType(f.Type, types)
 		for _, ann := range f.Annotations {
-			collectType(ann.Type, typeMap)
+			collectType(ann.Type, types)
 		}
 	}
 	for _, c := range classDef.Constructors {
 		for _, p := range c.Parameters {
-			collectType(p.Type, typeMap)
+			collectType(p.Type, types)
 		}
 		for _, th := range c.Throws {
-			collectType(th, typeMap)
+			collectType(th, types)
 		}
 		for _, ann := range c.Annotations {
-			collectType(ann.Type, typeMap)
+			collectType(ann.Type, types)
 		}
 	}
 	for _, m := range classDef.Methods {
 		if m.ReturnType != nil {
-			collectType(m.ReturnType, typeMap)
+			collectType(m.ReturnType, types)
 		}
 		for _, p := range m.Parameters {
-			collectType(p.Type, typeMap)
+			collectType(p.Type, types)
 		}
 		for _, th := range m.Throws {
-			collectType(th, typeMap)
+			collectType(th, types)
 		}
 		for _, ann := range m.Annotations {
-			collectType(ann.Type, typeMap)
+			collectType(ann.Type, types)
 		}
 	}
 	for _, inner := range classDef.InnerClasses {
-		collectTypesFromClass(inner, typeMap)
+		collectTypesFromClass(inner, types)
 	}
 }
 
-func collectType(t *ast.TypeNode, typeMap map[string]bool) {
+func collectType(t *ast.TypeNode, types *[]*ast.TypeNode) {
 	if t == nil {
 		return
 	}
-	if t.Package != "" && t.Kind == ast.KindObject {
-		typeMap[t.FullName()] = true
-	}
+	*types = append(*types, t)
 	for _, g := range t.Generics {
-		collectType(g, typeMap)
+		collectType(g, types)
 	}
 	if t.ExtendsBound != nil {
-		collectType(t.ExtendsBound, typeMap)
+		collectType(t.ExtendsBound, types)
 	}
 	if t.SuperBound != nil {
-		collectType(t.SuperBound, typeMap)
+		collectType(t.SuperBound, types)
 	}
 }

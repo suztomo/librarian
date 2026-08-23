@@ -192,11 +192,11 @@ func MessageToJavaType(m *api.Message) *ast.TypeNode {
 	}
 
 	pkg := lexicon.JavaPackageFromProto(m.Package)
-	name := m.Name
-	if m.Parent != nil {
-		name = m.Parent.Name + "." + m.Name
+	var parts []string
+	for curr := m; curr != nil; curr = curr.Parent {
+		parts = append([]string{curr.Name}, parts...)
 	}
-	return ast.ObjectType(name, pkg)
+	return ast.ObjectType(strings.Join(parts, "."), pkg)
 }
 
 // EnumToJavaType converts an api.Enum to its Java TypeNode.
@@ -205,11 +205,12 @@ func EnumToJavaType(e *api.Enum) *ast.TypeNode {
 		return ast.TypeObject
 	}
 	pkg := lexicon.JavaPackageFromProto(e.Package)
-	name := e.Name
-	if e.Parent != nil {
-		name = e.Parent.Name + "." + e.Name
+	var parts []string
+	parts = append(parts, e.Name)
+	for curr := e.Parent; curr != nil; curr = curr.Parent {
+		parts = append([]string{curr.Name}, parts...)
 	}
-	return ast.ObjectType(name, pkg)
+	return ast.ObjectType(strings.Join(parts, "."), pkg)
 }
 
 func toBoxedType(t *ast.TypeNode) *ast.TypeNode {
