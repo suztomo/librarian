@@ -265,10 +265,11 @@ func findPHPLibraries(repoPath string, googleapisDir string, globalDefaultCommon
 		}
 		libraryName := php.DefaultLibraryName(apis[0].Path)
 		lib := &config.Library{
-			Name:    libraryName,
-			Version: version,
-			APIs:    apis,
-			Output:  name,
+			CopyrightYear: "2026",
+			Name:          libraryName,
+			Version:       version,
+			APIs:          apis,
+			Output:        name,
 		}
 		if name == "Datastore" {
 			lib.Keep = []string{"src/V1/TransactionOptions/ReadOnly.php"}
