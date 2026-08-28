@@ -29,7 +29,6 @@ import (
 
 func TestInstall(t *testing.T) {
 	setupStubPip(t, "#!/bin/sh\n")
-
 	tools := &config.Tools{
 		Pip: []*config.PipTool{
 			{Name: "ruff", Version: "0.14.14"},
@@ -124,9 +123,42 @@ func TestInstallDir(t *testing.T) {
 	}
 }
 
+func TestTemplateDirectory(t *testing.T) {
+	binDir := t.TempDir()
+	t.Setenv(cache.EnvLibrarianBin, binDir)
+	got, err := templateDirectory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join(binDir, "python_tools", "templates")
+	if diff := cmp.Diff(want, got); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestExtractTemplates(t *testing.T) {
+	binDir := t.TempDir()
+	t.Setenv(cache.EnvLibrarianBin, binDir)
+	if err := extractTemplates(); err != nil {
+		t.Fatal(err)
+	}
+	wantDir := filepath.Join(binDir, "python_tools", "templates", "python_mono_repo_library")
+	for _, file := range []string{
+		"README.rst",
+		"docs/index.rst",
+		"docs/summary_overview.md",
+	} {
+		path := filepath.Join(wantDir, file)
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("expected template file %s to exist: %v", path, err)
+		}
+	}
+}
+
 func setupStubPip(t *testing.T, script string) {
 	t.Helper()
 	bin := t.TempDir()
 	testhelper.WriteExecutable(t, filepath.Join(bin, "pip"), script)
 	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv(cache.EnvLibrarianBin, t.TempDir())
 }
