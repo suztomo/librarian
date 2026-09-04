@@ -35,7 +35,10 @@ import (
 
 const commonResourcesProto = "google/cloud/common_resources.proto"
 
-var errNoAPIs = errors.New("no apis configured for library")
+var (
+	errNoAPIs      = errors.New("no apis configured for library")
+	errInvalidPath = errors.New("invalid path: must be a relative path within the directory")
+)
 
 // DefaultOutput derives an output path from a library name and a default
 // output path.
@@ -341,13 +344,25 @@ func escapeRubyCloudOptValue(val string) string {
 	return strings.ReplaceAll(val, ",", "\\,")
 }
 
+func cleanRelativePath(path string) (string, error) {
+	clean := filepath.Clean(path)
+	if filepath.IsAbs(clean) || strings.HasPrefix(clean, "..") || clean == "." {
+		return "", fmt.Errorf("%w: %q", errInvalidPath, path)
+	}
+	return clean, nil
+}
+
 // deleteAfterGeneration removes files from the staging directory after generation.
 func deleteAfterGeneration(api *config.API, stagingDir string) error {
 	if api.Ruby == nil {
 		return nil
 	}
 	for _, path := range api.Ruby.DeleteGenerationOutputPaths {
-		target := filepath.Join(stagingDir, "lib", path)
+		cleanPath, err := cleanRelativePath(path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(stagingDir, "lib", cleanPath)
 		// Return an error for non-existent paths to keep the configurations
 		// up to date.
 		if _, err := os.Stat(target); err != nil {
@@ -367,14 +382,18 @@ func deleteLibraryAfterGeneration(library *config.Library, stagingDir, outDir st
 		return nil
 	}
 	for _, path := range library.Ruby.DeleteGenerationOutputPaths {
-		target := filepath.Join(stagingDir, path)
+		cleanPath, err := cleanRelativePath(path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(stagingDir, cleanPath)
 		if _, err := os.Stat(target); err != nil {
 			return err
 		}
 		if err := os.RemoveAll(target); err != nil {
 			return err
 		}
-		if err := os.RemoveAll(filepath.Join(outDir, path)); err != nil {
+		if err := os.RemoveAll(filepath.Join(outDir, cleanPath)); err != nil {
 			return err
 		}
 	}

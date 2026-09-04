@@ -1084,6 +1084,24 @@ func TestDeleteAfterGeneration_Error(t *testing.T) {
 			},
 			wantErr: fs.ErrPermission,
 		},
+		{
+			name: "path traversal",
+			api: &config.API{
+				Ruby: &config.RubyAPI{
+					DeleteGenerationOutputPaths: []string{"../escaped.rb"},
+				},
+			},
+			wantErr: errInvalidPath,
+		},
+		{
+			name: "absolute path",
+			api: &config.API{
+				Ruby: &config.RubyAPI{
+					DeleteGenerationOutputPaths: []string{"/escaped.rb"},
+				},
+			},
+			wantErr: errInvalidPath,
+		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			stagingDir := t.TempDir()
@@ -1287,6 +1305,39 @@ func TestDeleteLibraryAfterGeneration_Error(t *testing.T) {
 				})
 			},
 			wantErr: fs.ErrPermission,
+		},
+		{
+			name: "path traversal",
+			library: &config.Library{
+				Ruby: &config.RubyPackage{
+					DeleteGenerationOutputPaths: []string{
+						"../escaped.txt",
+					},
+				},
+			},
+			wantErr: errInvalidPath,
+		},
+		{
+			name: "absolute path",
+			library: &config.Library{
+				Ruby: &config.RubyPackage{
+					DeleteGenerationOutputPaths: []string{
+						"/escaped.txt",
+					},
+				},
+			},
+			wantErr: errInvalidPath,
+		},
+		{
+			name: "current directory",
+			library: &config.Library{
+				Ruby: &config.RubyPackage{
+					DeleteGenerationOutputPaths: []string{
+						".",
+					},
+				},
+			},
+			wantErr: errInvalidPath,
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
