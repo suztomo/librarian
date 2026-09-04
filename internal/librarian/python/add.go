@@ -145,25 +145,17 @@ func versionless(apiPath string) string {
 func ReleasePleaseExtraFiles(lib *config.Library) []any {
 	var extraFiles []any
 	addedVersionless := make(map[string]bool)
-
 	for _, api := range lib.APIs {
-		protoPackage := strings.ReplaceAll(api.Path, "/", ".")
+		flattenedPath := flattenNestedPath(api.Path, lib)
+		if !addedVersionless[flattenedPath] {
+			addedVersionless[flattenedPath] = true
+			extraFiles = append(extraFiles, flattenedPath+"/gapic_version.py")
+		}
 		version := serviceconfig.ExtractVersion(api.Path)
-
-		versionlessPath := api.Path
 		if version != "" {
-			versionlessPath = path.Dir(api.Path)
+			extraFiles = append(extraFiles, flattenedPath+"_"+version+"/gapic_version.py")
 		}
-
-		if !addedVersionless[versionlessPath] {
-			addedVersionless[versionlessPath] = true
-			extraFiles = append(extraFiles, versionlessPath+"/gapic_version.py")
-		}
-
-		if version != "" {
-			extraFiles = append(extraFiles, versionlessPath+"_"+version+"/gapic_version.py")
-		}
-
+		protoPackage := strings.ReplaceAll(api.Path, "/", ".")
 		// https://github.com/googleapis/release-please/blob/main/docs/customizing.md#updating-arbitrary-files
 		snippetMetadata := map[string]any{
 			"jsonpath": "$.clientLibrary.version",
@@ -172,6 +164,13 @@ func ReleasePleaseExtraFiles(lib *config.Library) []any {
 		}
 		extraFiles = append(extraFiles, snippetMetadata)
 	}
-
 	return extraFiles
+}
+
+// flattenNestedPath flattens nested paths in apiPath, specifically for non-cloud API prefixes.
+// For example, google/shopping/merchant/inventories becomes google/shopping/merchant_inventories.
+func flattenNestedPath(apiPath string, lib *config.Library) string {
+	namespace := strings.ReplaceAll(gapicNamespace(apiPath, lib), ".", "/")
+	name := gapicName(apiPath, lib)
+	return path.Join(namespace, name)
 }
