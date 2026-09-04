@@ -1535,8 +1535,12 @@ func TestIsMultiWrapper(t *testing.T) {
 
 func TestRunToysTasks(t *testing.T) {
 	binDir := t.TempDir()
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	setupDummyToys(t, binDir, `#!/bin/sh
+	t.Setenv("LIBRARIAN_BIN", binDir)
+	installDir := filepath.Join(binDir, "ruby_tools", "bin")
+	if err := os.MkdirAll(installDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	setupDummyToys(t, installDir, `#!/bin/sh
 echo "$@" >> toys.log
 `)
 	for _, test := range []struct {
@@ -1601,8 +1605,12 @@ echo "$@" >> toys.log
 
 func TestRunToysTasks_Error(t *testing.T) {
 	binDir := t.TempDir()
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
-	setupDummyToys(t, binDir, `#!/bin/sh
+	t.Setenv("LIBRARIAN_BIN", binDir)
+	installDir := filepath.Join(binDir, "ruby_tools", "bin")
+	if err := os.MkdirAll(installDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	setupDummyToys(t, installDir, `#!/bin/sh
 exit 1
 `)
 	for _, test := range []struct {
