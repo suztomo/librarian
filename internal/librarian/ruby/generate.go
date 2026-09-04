@@ -412,7 +412,7 @@ func runToysTasks(ctx context.Context, library *config.Library, outDir string) e
 	if library.Ruby == nil || len(library.Ruby.ToysTasks) == 0 {
 		return nil
 	}
-	env, err := toysEnv()
+	env, err := toolsEnv()
 	if err != nil {
 		return err
 	}
@@ -427,23 +427,4 @@ func runToysTasks(ctx context.Context, library *config.Library, outDir string) e
 		}
 	}
 	return nil
-}
-
-func toysEnv() (map[string]string, error) {
-	installDir, err := InstallDir()
-	if err != nil {
-		return nil, err
-	}
-	binDir := filepath.Join(installDir, "bin")
-	path := binDir
-	if currentPath := os.Getenv("PATH"); currentPath != "" {
-		path = binDir + string(os.PathListSeparator) + currentPath
-	}
-	env := map[string]string{
-		"PATH": path,
-	}
-	if gemPath := os.Getenv("GEM_PATH"); gemPath != "" {
-		env["GEM_PATH"] = installDir + string(os.PathListSeparator) + gemPath
-	}
-	return env, nil
 }
