@@ -81,6 +81,9 @@ func Generate(ctx context.Context, cfg *config.Config, library *config.Library, 
 			}
 		}
 	}
+	if err := deleteLibraryAfterGeneration(library, tempDir, outDir); err != nil {
+		return err
+	}
 	keepSet := buildKeepSet(library.Name, library.Keep)
 	keepFunc := func(rel string) bool {
 		return isKept(rel, keepSet)
@@ -351,6 +354,27 @@ func deleteAfterGeneration(api *config.API, stagingDir string) error {
 			return err
 		}
 		if err := os.RemoveAll(target); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// deleteLibraryAfterGeneration removes configured paths from the staging and
+// output directories after generation.
+func deleteLibraryAfterGeneration(library *config.Library, stagingDir, outDir string) error {
+	if library.Ruby == nil {
+		return nil
+	}
+	for _, path := range library.Ruby.DeleteGenerationOutputPaths {
+		target := filepath.Join(stagingDir, path)
+		if _, err := os.Stat(target); err != nil {
+			return err
+		}
+		if err := os.RemoveAll(target); err != nil {
+			return err
+		}
+		if err := os.RemoveAll(filepath.Join(outDir, path)); err != nil {
 			return err
 		}
 	}
